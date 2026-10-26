@@ -197,6 +197,7 @@ export function mountAiMonitor(
     let lastCompositeFrameAt = 0;
     let emptyLandmarkFrames = 0;
     let currentLandmarks = null;
+    let cameraOrientationHint = "";
     let elapsedMs = Math.max(0, Number(snapshot?.elapsedMs) || 0);
     let rawCount = Math.max(0, Math.min(MAX_REPETITIONS, Number(snapshot?.rawCount) || 0));
     let saveInFlight = false;
@@ -644,7 +645,8 @@ function drawPose(landmarks) {
     video: {
         facingMode: "user",
         width: { ideal: 1280 },
-        height: { ideal: 720 }
+        height: { ideal: 720 },
+        aspectRatio: { ideal: 16 / 9 }
     },
     audio: false
 });
@@ -669,11 +671,19 @@ function drawPose(landmarks) {
             await video.play();
             await waitForVideoFrame(video);
             updatePreviewAspectRatio();
+            const videoTrackSettings = videoTrack.getSettings?.() || {};
+            const portraitCapture = video.videoHeight > video.videoWidth;
+            cameraOrientationHint = compositePreview && portraitCapture
+                ? "This camera is delivering portrait video. Turn your phone sideways for a true landscape capture; pose tracking can continue."
+                : "";
             console.info("Camera video frame is ready for pose detection.", {
                 readyState: video.readyState,
                 videoWidth: video.videoWidth,
                 videoHeight: video.videoHeight,
-                frameRate: videoTrack.getSettings?.().frameRate
+                trackWidth: videoTrackSettings.width,
+                trackHeight: videoTrackSettings.height,
+                frameRate: videoTrackSettings.frameRate,
+                portraitCapture
             });
             cameraStatus.textContent = "Camera connected";
             stream.getVideoTracks().forEach(track => {
@@ -702,7 +712,8 @@ function drawPose(landmarks) {
             sessionStarted = true;
             summary.hidden = true;
             setStatus("running", "Monitoring");
-            setFeedback("Pose tracking is ready. Stand in view to establish your starting position.");
+            setFeedback(cameraOrientationHint ||
+                "Pose tracking is ready. Stand in view to establish your starting position.");
             animationFrame = requestAnimationFrame(processFrames);
         } catch (error) {
             if (disposed) {
