@@ -184,7 +184,7 @@ async function createPoseLandmarker(diagnosticLog = () => {}) {
     const options = {
         baseOptions: {
             modelAssetPath: POSE_MODEL,
-            delegate: useCPU ? "CPU" : "GPU"
+            delegate:  "CPU" 
         },
         runningMode: "VIDEO",
         numPoses: 1,
