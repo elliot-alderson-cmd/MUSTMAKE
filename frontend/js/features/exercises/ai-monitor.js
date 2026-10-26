@@ -196,6 +196,7 @@ export function mountAiMonitor(
     let lastTimestamp = 0;
     let lastCompositeFrameAt = 0;
     let emptyLandmarkFrames = 0;
+    let consecutiveInferenceErrors = 0;
     let currentLandmarks = null;
     let cameraOrientationHint = "";
     let elapsedMs = Math.max(0, Number(snapshot?.elapsedMs) || 0);
@@ -484,6 +485,11 @@ function drawPose(landmarks) {
         setFeedback(result.feedback);
     }
 
+    function nextInferenceTimestamp() {
+        lastTimestamp = Math.max(performance.now(), lastTimestamp + 1);
+        return lastTimestamp;
+    }
+
     function renderPose(landmarks) {
         try {
             drawPose(landmarks);
@@ -501,7 +507,7 @@ function drawPose(landmarks) {
         }
     }
 
-    async function retryInferenceOnCpu(error, now) {
+    async function retryInferenceOnCpu(error) {
         if (landmarkerDelegate !== "GPU") throw error;
 
         console.warn("MediaPipe GPU inference failed; retrying with CPU.", error);
@@ -514,9 +520,7 @@ function drawPose(landmarks) {
         landmarker = cpu.landmarker;
         landmarkerDelegate = cpu.delegate;
         console.info("MediaPipe CPU inference fallback is active.");
-        const timestamp = Math.max(now, lastTimestamp + 1);
-        lastTimestamp = timestamp;
-        return landmarker.detectForVideo(video, timestamp);
+        return landmarker.detectForVideo(video, nextInferenceTimestamp());
     }
 
     async function processFrames(now) {
@@ -526,6 +530,8 @@ function drawPose(landmarks) {
 
         try {
             const hasFrame = video.readyState >= 2 &&
+                !video.paused &&
+                !video.ended &&
                 video.videoWidth > 0 &&
                 video.videoHeight > 0;
 
@@ -546,16 +552,37 @@ function drawPose(landmarks) {
                     }
                 } else {
                     lastInferenceAt = now;
-                    let timestamp = Math.max(now, lastTimestamp + 1);
-                    lastTimestamp = timestamp;
                     let result;
                     try {
-                        result = landmarker.detectForVideo(video, timestamp);
+                        result = landmarker.detectForVideo(video, nextInferenceTimestamp());
                     } catch (error) {
-                        result = await retryInferenceOnCpu(error, now);
-                        timestamp = lastTimestamp;
+                        try {
+                            result = await retryInferenceOnCpu(error);
+                        } catch (retryError) {
+                            if (!landmarker) throw retryError;
+                            consecutiveInferenceErrors += 1;
+                            if (
+                                consecutiveInferenceErrors === 1 ||
+                                consecutiveInferenceErrors % 10 === 0
+                            ) {
+                                console.error("MediaPipe inference failed; retrying on the next camera frame.", {
+                                    delegate: landmarkerDelegate,
+                                    consecutiveFailures: consecutiveInferenceErrors,
+                                    readyState: video.readyState,
+                                    videoWidth: video.videoWidth,
+                                    videoHeight: video.videoHeight,
+                                    timestamp: lastTimestamp,
+                                    error: retryError
+                                });
+                            }
+                            if (consecutiveInferenceErrors === 1) {
+                                setFeedback("Pose inference failed temporarily. Retrying camera frames.");
+                            }
+                            updateCurrentPose(null);
+                        }
                     }
                     if (result) {
+                        consecutiveInferenceErrors = 0;
                         const landmarks = result.landmarks?.[0] || null;
                         if (!landmarks?.length) {
                             emptyLandmarkFrames += 1;
@@ -563,7 +590,7 @@ function drawPose(landmarks) {
                                 console.info("MediaPipe inference returned no pose landmarks.", {
                                     frameCount: emptyLandmarkFrames,
                                     delegate: landmarkerDelegate,
-                                    timestamp,
+                                    timestamp: lastTimestamp,
                                     videoWidth: video.videoWidth,
                                     videoHeight: video.videoHeight,
                                     readyState: video.readyState
