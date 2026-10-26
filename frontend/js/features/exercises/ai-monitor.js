@@ -100,6 +100,8 @@ export function mountAiMonitor(
     const video = root.querySelector("#monitorVideo");
     const canvas = root.querySelector("#monitorCanvas");
     const preview = root.querySelector(".monitor-preview");
+    const compositePreview = window.innerWidth <= 768 ||
+        window.matchMedia("(pointer: coarse)").matches;
     const placeholder = root.querySelector(".monitor-preview-placeholder");
     const status = root.querySelector("#monitorStatus");
     const cameraStatus = root.querySelector("#monitorCameraStatus");
@@ -120,6 +122,8 @@ export function mountAiMonitor(
     const detector = createExerciseDetector(exercise.slug);
     const listeners = new AbortController();
 
+    preview.classList.toggle("monitor-preview-composited", compositePreview);
+
     let lifecycle = "idle";
     let stream = null;
     let landmarker = null;
@@ -128,6 +132,8 @@ export function mountAiMonitor(
     let disposed = false;
     let lastInferenceAt = 0;
     let lastTimestamp = 0;
+    let lastCompositeFrameAt = 0;
+    let currentLandmarks = null;
     let elapsedMs = Math.max(0, Number(snapshot?.elapsedMs) || 0);
     let rawCount = Math.max(0, Math.min(MAX_REPETITIONS, Number(snapshot?.rawCount) || 0));
     let saveInFlight = false;
@@ -214,7 +220,7 @@ function drawPose(landmarks) {
     clearOverlay();
 
     if (
-        !landmarks?.length ||
+        (!landmarks?.length && !compositePreview) ||
         !video.videoWidth ||
         !video.videoHeight
     ) {
@@ -256,6 +262,15 @@ function drawPose(landmarks) {
     context.lineJoin = "round";
     context.strokeStyle = "rgba(74, 222, 128, 0.95)";
     context.fillStyle = "#f8fafc";
+
+    if (compositePreview) {
+        context.drawImage(video, offsetX, offsetY, drawnWidth, drawnHeight);
+    }
+
+    if (!landmarks?.length) {
+        context.restore();
+        return;
+    }
 
     const visibilityOf = landmark =>
         landmark?.visibility ?? landmark?.presence ?? 1;
@@ -318,6 +333,7 @@ function drawPose(landmarks) {
     }
 
     function releaseCamera() {
+        currentLandmarks = null;
         if (stream) {
             stream.getTracks().forEach(track => {
                 track.onended = null;
@@ -359,8 +375,9 @@ function drawPose(landmarks) {
     }
 
     function updateCurrentPose(landmarks) {
+        currentLandmarks = landmarks;
         if (!landmarks?.length) {
-            clearOverlay();
+            drawPose(null);
             if (isPlank) {
                 const result = detector.update(null, performance.now());
                 elapsedMs = result.elapsedMs;
@@ -386,6 +403,12 @@ function drawPose(landmarks) {
 
     function processFrames(now) {
         if (disposed || lifecycle !== "running" || document.hidden) return;
+        if (compositePreview &&
+            video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+            now - lastCompositeFrameAt >= 33) {
+            lastCompositeFrameAt = now;
+            drawPose(currentLandmarks);
+        }
         if (now - lastInferenceAt >= INFERENCE_INTERVAL_MS &&
             video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
             lastInferenceAt = now;

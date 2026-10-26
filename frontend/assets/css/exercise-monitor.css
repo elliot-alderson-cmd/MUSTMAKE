@@ -92,6 +92,10 @@
     z-index: 0;
 }
 
+.monitor-preview-composited video {
+    opacity: 0;
+}
+
 .monitor-preview video[hidden],
 .monitor-summary[hidden],
 .monitor-preview-placeholder[hidden] {
