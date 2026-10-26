@@ -470,14 +470,13 @@ function drawPose(landmarks) {
 
         try {
             stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: "user",
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 },
-                    zoom: { ideal: 1 }
-                },
-                audio: false
-            });
+    video: {
+        facingMode: "user",
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+    },
+    audio: false
+});
             cameraEnded = false;
             if (disposed) {
                 stream.getTracks().forEach(track => track.stop());

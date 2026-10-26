@@ -128,12 +128,14 @@
 
 @media (max-width: 768px), (pointer: coarse) {
     .monitor-preview {
-        width: min(100%, calc(70svh * 16 / 9), 1280px);
+        width: 100%;
+        max-width: 100%;
         aspect-ratio: 16 / 9;
+        max-height: none;
         margin-inline: auto;
+        overflow: hidden;
     }
 }
-
 .monitor-camera-icon {
     display: grid;
     width: 48px;
