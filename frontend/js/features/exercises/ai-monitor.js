@@ -156,78 +156,143 @@ export function mountAiMonitor(
         feedback.textContent = message;
     }
 
-    function clearOverlay() {
-        context.clearRect(0, 0, canvas.width, canvas.height);
+ function clearOverlay() {
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function resizeCanvas() {
+    const bounds = canvas.getBoundingClientRect();
+
+    if (!bounds.width || !bounds.height) return;
+
+    const ratio = Math.max(1, window.devicePixelRatio || 1);
+
+    const pixelWidth = Math.max(1, Math.round(bounds.width * ratio));
+    const pixelHeight = Math.max(1, Math.round(bounds.height * ratio));
+
+    if (canvas.width !== pixelWidth) {
+        canvas.width = pixelWidth;
     }
 
-    function resizeCanvas() {
-        const bounds = canvas.getBoundingClientRect();
-        if (!bounds.width || !bounds.height) return;
-        const ratio = Math.max(1, window.devicePixelRatio || 1);
-        const pixelWidth = Math.round(bounds.width * ratio);
-        const pixelHeight = Math.round(bounds.height * ratio);
-        if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
-            canvas.width = pixelWidth;
-            canvas.height = pixelHeight;
+    if (canvas.height !== pixelHeight) {
+        canvas.height = pixelHeight;
+    }
+
+    clearOverlay();
+
+    context.setTransform(
+        canvas.width / bounds.width,
+        0,
+        0,
+        canvas.height / bounds.height,
+        0,
+        0
+    );
+}
+
+function updatePreviewAspectRatio() {
+    if (!video.videoWidth || !video.videoHeight) return;
+
+    preview.style.aspectRatio =
+        `${video.videoWidth} / ${video.videoHeight}`;
+
+    requestAnimationFrame(() => {
+        if (!disposed) {
+            resizeCanvas();
         }
-        context.setTransform(ratio, 0, 0, ratio, 0, 0);
-        clearOverlay();
+    });
+}
+
+function drawPose(landmarks) {
+    clearOverlay();
+
+    if (
+        !landmarks?.length ||
+        !video.videoWidth ||
+        !video.videoHeight
+    ) {
+        return;
     }
 
-    function updatePreviewAspectRatio() {
-        if (!video.videoWidth || !video.videoHeight) return;
-        preview.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
-        resizeCanvas();
+    const bounds = canvas.getBoundingClientRect();
+
+    if (
+        !bounds.width ||
+        !bounds.height ||
+        !canvas.width ||
+        !canvas.height
+    ) {
+        return;
     }
 
-    function drawPose(landmarks) {
-        clearOverlay();
-        if (!landmarks?.length || !video.videoWidth || !video.videoHeight) return;
-        const bounds = canvas.getBoundingClientRect();
-        if (!bounds.width || !bounds.height) return;
-        const scale = Math.min(bounds.width / video.videoWidth, bounds.height / video.videoHeight);
-        const drawnWidth = video.videoWidth * scale;
-        const drawnHeight = video.videoHeight * scale;
-        const offsetX = (bounds.width - drawnWidth) / 2;
-        const offsetY = (bounds.height - drawnHeight) / 2;
-        const ratio = canvas.width / bounds.width;
+    // Match the video's object-fit: contain behavior.
+    const scale = Math.min(
+        bounds.width / video.videoWidth,
+        bounds.height / video.videoHeight
+    );
 
-        context.save();
-        context.setTransform(ratio, 0, 0, ratio, 0, 0);
-        context.lineWidth = 3;
-        context.lineCap = "round";
-        context.strokeStyle = "rgba(74, 222, 128, 0.9)";
-        context.fillStyle = "#f8fafc";
+    const drawnWidth = video.videoWidth * scale;
+    const drawnHeight = video.videoHeight * scale;
 
-        const point = index => {
-            const landmark = landmarks[index];
-            if (!landmark || landmark.visibility < 0.4) return null;
-            return {
-                x: landmark.x * drawnWidth + offsetX,
-                y: landmark.y * drawnHeight + offsetY
-            };
+    const offsetX = (bounds.width - drawnWidth) / 2;
+    const offsetY = (bounds.height - drawnHeight) / 2;
+
+    const scaleX = canvas.width / bounds.width;
+    const scaleY = canvas.height / bounds.height;
+
+    context.save();
+
+    context.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+
+    context.lineWidth = 3;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.strokeStyle = "rgba(74, 222, 128, 0.95)";
+    context.fillStyle = "#f8fafc";
+
+    const visibilityOf = landmark =>
+        landmark?.visibility ?? landmark?.presence ?? 1;
+
+    function point(index) {
+        const landmark = landmarks[index];
+
+        if (!landmark || visibilityOf(landmark) < 0.4) {
+            return null;
+        }
+
+        return {
+            x: landmark.x * drawnWidth + offsetX,
+            y: landmark.y * drawnHeight + offsetY
         };
-
-        for (const [fromIndex, toIndex] of CONNECTIONS) {
-            const from = point(fromIndex);
-            const to = point(toIndex);
-            if (!from || !to) continue;
-            context.beginPath();
-            context.moveTo(from.x, from.y);
-            context.lineTo(to.x, to.y);
-            context.stroke();
-        }
-        landmarks.forEach((landmark, index) => {
-            if (landmark.visibility < 0.5) return;
-            const position = point(index);
-            if (!position) return;
-            context.beginPath();
-            context.arc(position.x, position.y, 3.5, 0, Math.PI * 2);
-            context.fill();
-        });
-        context.restore();
     }
 
+    for (const [fromIndex, toIndex] of CONNECTIONS) {
+        const from = point(fromIndex);
+        const to = point(toIndex);
+
+        if (!from || !to) continue;
+
+        context.beginPath();
+        context.moveTo(from.x, from.y);
+        context.lineTo(to.x, to.y);
+        context.stroke();
+    }
+
+    landmarks.forEach((landmark, index) => {
+        if (visibilityOf(landmark) < 0.5) return;
+
+        const position = point(index);
+
+        if (!position) return;
+
+        context.beginPath();
+        context.arc(position.x, position.y, 3.5, 0, Math.PI * 2);
+        context.fill();
+    });
+
+    context.restore();
+}
     function updateClock() {
         if (isPlank && timeOutput) {
             timeOutput.textContent = formatTime(roundedDuration(detector.elapsedMs));
