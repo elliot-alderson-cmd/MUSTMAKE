@@ -363,13 +363,25 @@
     min-width: 0;
     min-height: 44px;
     height: 44px;
-    padding: 0.25rem 0.4rem;
-    border: 1px solid var(--glass-border);
-    border-radius: 6px;
+    padding: 0.25rem 0;
+    border: 0;
+    border-bottom: 1px solid var(--glass-border);
+    border-radius: 0;
     color: var(--text-primary);
-    background: var(--glass-panel);
+    background: transparent;
+    box-shadow: none;
     font: inherit;
     font-variant-numeric: tabular-nums;
+}
+
+.profile-metric-editor input:focus {
+    border-bottom-color: var(--text-primary);
+    background: transparent;
+    box-shadow: none;
+}
+
+.profile-metric-editor input:focus-visible {
+    outline: none;
 }
 
 .profile-metric-actions {
