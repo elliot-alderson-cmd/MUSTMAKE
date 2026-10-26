@@ -98,6 +98,7 @@ export function mountAiMonitor(
     const isJumpCount = exercise.slug === "skipping-rope";
     const video = root.querySelector("#monitorVideo");
     const canvas = root.querySelector("#monitorCanvas");
+    const preview = root.querySelector(".monitor-preview");
     const placeholder = root.querySelector(".monitor-preview-placeholder");
     const status = root.querySelector("#monitorStatus");
     const cameraStatus = root.querySelector("#monitorCameraStatus");
@@ -173,12 +174,18 @@ export function mountAiMonitor(
         clearOverlay();
     }
 
+    function updatePreviewAspectRatio() {
+        if (!video.videoWidth || !video.videoHeight) return;
+        preview.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+        resizeCanvas();
+    }
+
     function drawPose(landmarks) {
         clearOverlay();
         if (!landmarks?.length || !video.videoWidth || !video.videoHeight) return;
         const bounds = canvas.getBoundingClientRect();
         if (!bounds.width || !bounds.height) return;
-        const scale = Math.max(bounds.width / video.videoWidth, bounds.height / video.videoHeight);
+        const scale = Math.min(bounds.width / video.videoWidth, bounds.height / video.videoHeight);
         const drawnWidth = video.videoWidth * scale;
         const drawnHeight = video.videoHeight * scale;
         const offsetX = (bounds.width - drawnWidth) / 2;
@@ -366,7 +373,12 @@ export function mountAiMonitor(
 
         try {
             stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+                video: {
+                    facingMode: "user",
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                    zoom: { ideal: 1 }
+                },
                 audio: false
             });
             cameraEnded = false;
@@ -375,10 +387,20 @@ export function mountAiMonitor(
                 stream = null;
                 return;
             }
+            const videoTrack = stream.getVideoTracks()[0];
+            const zoomRange = videoTrack.getCapabilities?.().zoom;
+            if (zoomRange && Number.isFinite(zoomRange.min)) {
+                try {
+                    await videoTrack.applyConstraints({ advanced: [{ zoom: zoomRange.min }] });
+                } catch (error) {
+                    console.warn("Could not set the camera to its widest zoom.", error);
+                }
+            }
             video.srcObject = stream;
             video.hidden = false;
             placeholder.hidden = true;
             await video.play();
+            updatePreviewAspectRatio();
             cameraStatus.textContent = "Camera connected";
             stream.getVideoTracks().forEach(track => {
                 track.onended = () => {
@@ -615,6 +637,7 @@ export function mountAiMonitor(
     document.addEventListener("visibilitychange", handleVisibilityChange, { signal: listeners.signal });
     window.addEventListener("pagehide", handlePageHide, { signal: listeners.signal });
     window.addEventListener("resize", resizeCanvas, { signal: listeners.signal });
+    video.addEventListener("resize", updatePreviewAspectRatio, { signal: listeners.signal });
     if ("ResizeObserver" in window) {
         resizeObserver = new ResizeObserver(resizeCanvas);
         resizeObserver.observe(canvas);
