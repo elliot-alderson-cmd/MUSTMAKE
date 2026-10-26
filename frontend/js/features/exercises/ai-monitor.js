@@ -10,6 +10,7 @@ const POSE_MODEL =
 const MAX_REPETITIONS = 10000;
 const MAX_REVIEWED_VALUE = 150;
 const INFERENCE_INTERVAL_MS = 110;
+const OVERLAY_VISIBILITY_THRESHOLD = 0.15;
 const CONNECTIONS = [
     [11, 12], [11, 13], [13, 15], [12, 14], [14, 16],
     [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [27, 29], [29, 31],
@@ -257,7 +258,12 @@ function drawPose(landmarks) {
     function point(index) {
         const landmark = landmarks[index];
 
-        if (!landmark || visibilityOf(landmark) < 0.4) {
+        if (
+            !landmark ||
+            !Number.isFinite(landmark.x) ||
+            !Number.isFinite(landmark.y) ||
+            visibilityOf(landmark) < OVERLAY_VISIBILITY_THRESHOLD
+        ) {
             return null;
         }
 
@@ -280,7 +286,7 @@ function drawPose(landmarks) {
     }
 
     landmarks.forEach((landmark, index) => {
-        if (visibilityOf(landmark) < 0.5) return;
+        if (visibilityOf(landmark) < OVERLAY_VISIBILITY_THRESHOLD) return;
 
         const position = point(index);
 

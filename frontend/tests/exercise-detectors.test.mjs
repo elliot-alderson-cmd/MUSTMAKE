@@ -25,6 +25,14 @@ function setPoints(landmarks, points) {
     return landmarks;
 }
 
+function scalePose(landmarks, scale) {
+    return landmarks.map(point => ({
+        ...point,
+        x: 0.5 + (point.x - 0.5) * scale,
+        y: 0.5 + (point.y - 0.5) * scale
+    }));
+}
+
 function squatPose(angle) {
     const landmarks = pose();
     const hip = angle === 180
@@ -373,11 +381,44 @@ test("jumping jack detector requires an open and returned closed position", () =
     assert.equal(incomplete.count, 0);
 });
 
+test("jumping jack detector remains reliable when the person appears smaller in frame", () => {
+    const detector = new JumpingJackDetector();
+    let time = 0;
+    for (const open of [false, true, false, false]) {
+        feed(detector, scalePose(jumpingJackPose(open), 0.35), time, 6);
+        time += 600;
+    }
+    assert.equal(detector.count, 1);
+});
+
+test("jumping jack detector rejects a narrow stance as the open position", () => {
+    const detector = new JumpingJackDetector();
+    feed(detector, jumpingJackPose(false), 0, 6);
+
+    const narrowOpen = jumpingJackPose(true);
+    narrowOpen[27].x = 0.465;
+    narrowOpen[28].x = 0.535;
+    feed(detector, narrowOpen, 600, 6);
+    feed(detector, jumpingJackPose(false), 1200, 6);
+
+    assert.equal(detector.count, 0);
+});
+
 test("skipping rope detector requires a visible jump and landing cycle", () => {
     const detector = new SkippingRopeDetector();
     let time = 0;
     for (const jumping of [false, true, false, false]) {
         feed(detector, skippingRopePose(jumping), time, 6);
+        time += 600;
+    }
+    assert.equal(detector.count, 1);
+});
+
+test("skipping rope detector detects jumps when the person appears smaller in frame", () => {
+    const detector = new SkippingRopeDetector();
+    let time = 0;
+    for (const jumping of [false, true, false, false]) {
+        feed(detector, scalePose(skippingRopePose(jumping), 0.3), time, 6);
         time += 600;
     }
     assert.equal(detector.count, 1);

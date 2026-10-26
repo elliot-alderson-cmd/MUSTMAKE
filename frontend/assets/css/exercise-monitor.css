@@ -63,6 +63,7 @@
 
 .monitor-preview {
     position: relative;
+    isolation: isolate;
     display: grid;
     min-width: 0;
     aspect-ratio: 4 / 3;
@@ -87,6 +88,8 @@
 
 .monitor-preview video {
     z-index: 0;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
 }
 
 .monitor-preview video[hidden],
@@ -96,7 +99,9 @@
 }
 
 .monitor-preview canvas {
-    z-index: 1;
+    z-index: 2;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
     pointer-events: none;
 }
 

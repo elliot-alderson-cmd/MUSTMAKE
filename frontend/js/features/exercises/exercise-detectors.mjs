@@ -613,10 +613,10 @@ export class ExerciseArmDetector extends AngleCycleDetector {
 
 export const JUMPING_JACK_THRESHOLDS = Object.freeze({
     visibility: VISIBILITY_THRESHOLD,
-    armsDownMax: 0.16,
-    armsUpMin: 0.18,
-    feetClosedMax: 0.12,
-    feetOpenMin: 0.2,
+    armsDownMax: 0.35,
+    armsUpMin: 0.75,
+    feetClosedMax: 0.55,
+    feetOpenMin: 1.15,
     settleMs: 100,
     establishMs: 250,
     returnMs: 130,
@@ -645,7 +645,7 @@ export class JumpingJackDetector extends RepDetector {
         const armHeight = (
             (landmarks[11].y - landmarks[15].y) +
             (landmarks[12].y - landmarks[16].y)
-        ) / 2;
+        ) / (2 * shoulderWidth);
         const legWidth = Math.abs(landmarks[27].x - landmarks[28].x) / hipWidth;
         const armsUp = armHeight >= t.armsUpMin;
         const armsDown = armHeight <= t.armsDownMax;
@@ -686,8 +686,8 @@ export class JumpingJackDetector extends RepDetector {
 
 export const SKIPPING_ROPE_THRESHOLDS = Object.freeze({
     visibility: VISIBILITY_THRESHOLD,
-    minFootClearance: 0.025,
-    landingTolerance: 0.012,
+    minFootClearance: 0.1,
+    landingTolerance: 0.04,
     settleMs: 60,
     establishMs: 250,
     returnMs: 90,
@@ -720,9 +720,14 @@ export class SkippingRopeDetector extends RepDetector {
         const leftLeg = angleAt(landmarks[23], landmarks[25], landmarks[27]);
         const rightLeg = angleAt(landmarks[24], landmarks[26], landmarks[28]);
         const hipY = (landmarks[23].y + landmarks[24].y) / 2;
+        const torsoLength = (
+            Math.hypot(landmarks[11].x - landmarks[23].x, landmarks[11].y - landmarks[23].y) +
+            Math.hypot(landmarks[12].x - landmarks[24].x, landmarks[12].y - landmarks[24].y)
+        ) / 2;
         if (leftLeg == null || rightLeg == null ||
             Math.abs(leftLeg - rightLeg) > 65 ||
-            Math.abs(landmarks[27].x - landmarks[28].x) > 0.3) {
+            Math.abs(landmarks[27].x - landmarks[28].x) > 0.3 ||
+            torsoLength < MIN_SEGMENT_LENGTH) {
             this.loseTracking();
             return this.result(null);
         }
@@ -740,7 +745,7 @@ export class SkippingRopeDetector extends RepDetector {
                 });
             } else this.clearPending();
         } else {
-            const rise = this.baselineHipY - hipY;
+            const rise = (this.baselineHipY - hipY) / torsoLength;
             if (this.state === "grounded") {
                 this.feedback = "Jump lightly with both feet together. Counts require a clear rise and landing.";
                 if (rise >= t.minFootClearance) {
