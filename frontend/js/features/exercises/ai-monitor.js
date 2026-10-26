@@ -159,8 +159,6 @@ export function mountAiMonitor(
     const video = root.querySelector("#monitorVideo");
     const canvas = root.querySelector("#monitorCanvas");
     const preview = root.querySelector(".monitor-preview");
-    const compositePreview = window.innerWidth <= 768 ||
-        Boolean(window.matchMedia?.("(pointer: coarse)").matches);
     const placeholder = root.querySelector(".monitor-preview-placeholder");
     const status = root.querySelector("#monitorStatus");
     const cameraStatus = root.querySelector("#monitorCameraStatus");
@@ -180,10 +178,6 @@ export function mountAiMonitor(
     const context = canvas.getContext("2d");
     const detector = createExerciseDetector(exercise.slug);
     const listeners = new AbortController();
-    let compositingAvailable = compositePreview;
-
-    preview.classList.toggle("monitor-preview-composited", compositePreview);
-
     let lifecycle = "idle";
     let stream = null;
     let landmarker = null;
@@ -194,7 +188,6 @@ export function mountAiMonitor(
     let frameProcessing = false;
     let lastInferenceAt = 0;
     let lastTimestamp = 0;
-    let lastCompositeFrameAt = 0;
     let emptyLandmarkFrames = 0;
     let consecutiveInferenceErrors = 0;
     let currentLandmarks = null;
@@ -264,13 +257,9 @@ function resizeCanvas() {
 }
 
 function updatePreviewAspectRatio() {
-    const useLandscapePreview = window.innerWidth <= 768 ||
-        Boolean(window.matchMedia?.("(pointer: coarse)").matches);
-    const aspectRatio = useLandscapePreview
-        ? "16 / 9"
-        : video.videoWidth && video.videoHeight
-            ? `${video.videoWidth} / ${video.videoHeight}`
-            : "4 / 3";
+    const aspectRatio = video.videoWidth && video.videoHeight
+        ? `${video.videoWidth} / ${video.videoHeight}`
+        : "4 / 3";
 
     preview.style.aspectRatio = aspectRatio;
 
@@ -285,7 +274,7 @@ function drawPose(landmarks) {
     clearOverlay();
 
     if (
-        (!landmarks?.length && !compositePreview) ||
+        !landmarks?.length ||
         !video.videoWidth ||
         !video.videoHeight
     ) {
@@ -327,33 +316,6 @@ function drawPose(landmarks) {
     context.lineJoin = "round";
     context.strokeStyle = "rgba(74, 222, 128, 0.95)";
     context.fillStyle = "#f8fafc";
-
-    if (compositingAvailable) {
-        const blur = 18;
-        const overscan = blur * 2;
-        const backgroundScale = Math.max(
-            (bounds.width + overscan * 2) / video.videoWidth,
-            (bounds.height + overscan * 2) / video.videoHeight
-        );
-        const backgroundWidth = video.videoWidth * backgroundScale;
-        const backgroundHeight = video.videoHeight * backgroundScale;
-
-        context.filter = `blur(${blur}px)`;
-        context.drawImage(
-            video,
-            (bounds.width - backgroundWidth) / 2,
-            (bounds.height - backgroundHeight) / 2,
-            backgroundWidth,
-            backgroundHeight
-        );
-        context.filter = "none";
-        context.drawImage(video, offsetX, offsetY, drawnWidth, drawnHeight);
-    }
-
-    if (!landmarks?.length) {
-        context.restore();
-        return;
-    }
 
     const visibilityOf = landmark =>
         landmark?.visibility ?? landmark?.presence ?? 1;
@@ -494,16 +456,7 @@ function drawPose(landmarks) {
         try {
             drawPose(landmarks);
         } catch (error) {
-            console.error("Canvas pose preview rendering failed.", error);
-            if (compositingAvailable) {
-                compositingAvailable = false;
-                preview.classList.remove("monitor-preview-composited");
-                try {
-                    drawPose(landmarks);
-                } catch (overlayError) {
-                    console.error("Pose overlay could not be rendered.", overlayError);
-                }
-            }
+            console.error("Canvas pose overlay rendering failed.", error);
         }
     }
 
@@ -534,11 +487,6 @@ function drawPose(landmarks) {
                 !video.ended &&
                 video.videoWidth > 0 &&
                 video.videoHeight > 0;
-
-            if (compositingAvailable && hasFrame && now - lastCompositeFrameAt >= 33) {
-                lastCompositeFrameAt = now;
-                renderPose(currentLandmarks);
-            }
 
             if (now - lastInferenceAt >= INFERENCE_INTERVAL_MS) {
                 if (!hasFrame) {
@@ -700,7 +648,7 @@ function drawPose(landmarks) {
             updatePreviewAspectRatio();
             const videoTrackSettings = videoTrack.getSettings?.() || {};
             const portraitCapture = video.videoHeight > video.videoWidth;
-            cameraOrientationHint = compositePreview && portraitCapture
+            cameraOrientationHint = portraitCapture
                 ? "This camera is delivering portrait video. Turn your phone sideways for a true landscape capture; pose tracking can continue."
                 : "";
             console.info("Camera video frame is ready for pose detection.", {
