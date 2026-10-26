@@ -56,31 +56,90 @@ function cameraErrorMessage(error) {
     return "Could not start the camera. Check your browser and camera settings, then try again.";
 }
 
-async function createPoseLandmarker() {
+async function createPoseLandmarker(delegate = "GPU") {
     const { FilesetResolver, PoseLandmarker } = await loadVisionModule();
-    const fileset = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM);
-    const options = {
-        baseOptions: { modelAssetPath: POSE_MODEL, delegate: "GPU" },
-        runningMode: "VIDEO",
-        numPoses: 1,
-       minPoseDetectionConfidence: 0.35,
-    minPosePresenceConfidence: 0.35,
-    minTrackingConfidence: 0.35
-    };
     try {
-        return await PoseLandmarker.createFromOptions(fileset, options);
-    } catch (gpuError) {
+        const fileset = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM);
+        const options = {
+            baseOptions: { modelAssetPath: POSE_MODEL, delegate },
+            runningMode: "VIDEO",
+            numPoses: 1,
+            minPoseDetectionConfidence: 0.35,
+            minPosePresenceConfidence: 0.35,
+            minTrackingConfidence: 0.35
+        };
         try {
-            return await PoseLandmarker.createFromOptions(fileset, {
-                ...options,
-                baseOptions: { modelAssetPath: POSE_MODEL, delegate: "CPU" }
-            });
-        } catch (cpuError) {
-            throw new Error("Pose detection could not initialize on this device.", {
-                cause: cpuError || gpuError
-            });
+            return {
+                landmarker: await PoseLandmarker.createFromOptions(fileset, options),
+                delegate
+            };
+        } catch (initializationError) {
+            if (delegate === "CPU") throw initializationError;
+            console.warn("MediaPipe GPU initialization failed; retrying with CPU.", initializationError);
+            try {
+                return {
+                    landmarker: await PoseLandmarker.createFromOptions(fileset, {
+                        ...options,
+                        baseOptions: { modelAssetPath: POSE_MODEL, delegate: "CPU" }
+                    }),
+                    delegate: "CPU"
+                };
+            } catch (cpuError) {
+                throw new Error("Pose detection could not initialize with GPU or CPU.", {
+                    cause: cpuError
+                });
+            }
         }
+    } catch (error) {
+        console.error("MediaPipe WASM or pose model initialization failed.", error);
+        throw error;
     }
+}
+
+function waitForVideoFrame(video) {
+    if (
+        video.readyState >= 2 &&
+        video.videoWidth > 0 &&
+        video.videoHeight > 0
+    ) {
+        return Promise.resolve();
+    }
+
+    return new Promise((resolve, reject) => {
+        let timeout;
+        const cleanup = () => {
+            clearTimeout(timeout);
+            video.removeEventListener("loadeddata", checkReady);
+            video.removeEventListener("resize", checkReady);
+            video.removeEventListener("error", handleError);
+        };
+        const checkReady = () => {
+            if (
+                video.readyState >= 2 &&
+                video.videoWidth > 0 &&
+                video.videoHeight > 0
+            ) {
+                cleanup();
+                resolve();
+            }
+        };
+        const handleError = () => {
+            cleanup();
+            reject(new Error("The camera did not provide a readable video frame."));
+        };
+
+        video.addEventListener("loadeddata", checkReady);
+        video.addEventListener("resize", checkReady);
+        video.addEventListener("error", handleError);
+        timeout = setTimeout(() => {
+            cleanup();
+            reject(new Error(
+                `Timed out waiting for a camera frame (readyState=${video.readyState}, ` +
+                `size=${video.videoWidth}x${video.videoHeight}).`
+            ));
+        }, 10000);
+        checkReady();
+    });
 }
 
 function roundedDuration(milliseconds) {
@@ -101,7 +160,7 @@ export function mountAiMonitor(
     const canvas = root.querySelector("#monitorCanvas");
     const preview = root.querySelector(".monitor-preview");
     const compositePreview = window.innerWidth <= 768 ||
-        window.matchMedia("(pointer: coarse)").matches;
+        Boolean(window.matchMedia?.("(pointer: coarse)").matches);
     const placeholder = root.querySelector(".monitor-preview-placeholder");
     const status = root.querySelector("#monitorStatus");
     const cameraStatus = root.querySelector("#monitorCameraStatus");
@@ -121,18 +180,22 @@ export function mountAiMonitor(
     const context = canvas.getContext("2d");
     const detector = createExerciseDetector(exercise.slug);
     const listeners = new AbortController();
+    let compositingAvailable = compositePreview;
 
     preview.classList.toggle("monitor-preview-composited", compositePreview);
 
     let lifecycle = "idle";
     let stream = null;
     let landmarker = null;
+    let landmarkerDelegate = null;
     let animationFrame = null;
     let resizeObserver = null;
     let disposed = false;
+    let frameProcessing = false;
     let lastInferenceAt = 0;
     let lastTimestamp = 0;
     let lastCompositeFrameAt = 0;
+    let emptyLandmarkFrames = 0;
     let currentLandmarks = null;
     let elapsedMs = Math.max(0, Number(snapshot?.elapsedMs) || 0);
     let rawCount = Math.max(0, Math.min(MAX_REPETITIONS, Number(snapshot?.rawCount) || 0));
@@ -200,7 +263,7 @@ function resizeCanvas() {
 
 function updatePreviewAspectRatio() {
     const useLandscapePreview = window.innerWidth <= 768 ||
-        window.matchMedia("(pointer: coarse)").matches;
+        Boolean(window.matchMedia?.("(pointer: coarse)").matches);
     const aspectRatio = useLandscapePreview
         ? "16 / 9"
         : video.videoWidth && video.videoHeight
@@ -263,7 +326,25 @@ function drawPose(landmarks) {
     context.strokeStyle = "rgba(74, 222, 128, 0.95)";
     context.fillStyle = "#f8fafc";
 
-    if (compositePreview) {
+    if (compositingAvailable) {
+        const blur = 18;
+        const overscan = blur * 2;
+        const backgroundScale = Math.max(
+            (bounds.width + overscan * 2) / video.videoWidth,
+            (bounds.height + overscan * 2) / video.videoHeight
+        );
+        const backgroundWidth = video.videoWidth * backgroundScale;
+        const backgroundHeight = video.videoHeight * backgroundScale;
+
+        context.filter = `blur(${blur}px)`;
+        context.drawImage(
+            video,
+            (bounds.width - backgroundWidth) / 2,
+            (bounds.height - backgroundHeight) / 2,
+            backgroundWidth,
+            backgroundHeight
+        );
+        context.filter = "none";
         context.drawImage(video, offsetX, offsetY, drawnWidth, drawnHeight);
     }
 
@@ -358,6 +439,7 @@ function drawPose(landmarks) {
             }
             landmarker = null;
         }
+        landmarkerDelegate = null;
     }
 
     function endActiveInterval() {
@@ -377,7 +459,7 @@ function drawPose(landmarks) {
     function updateCurrentPose(landmarks) {
         currentLandmarks = landmarks;
         if (!landmarks?.length) {
-            drawPose(null);
+            renderPose(null);
             if (isPlank) {
                 const result = detector.update(null, performance.now());
                 elapsedMs = result.elapsedMs;
@@ -389,7 +471,7 @@ function drawPose(landmarks) {
             }
             return;
         }
-        drawPose(landmarks);
+        renderPose(landmarks);
         const result = detector.update(landmarks, performance.now());
         if (isPlank) {
             elapsedMs = result.elapsedMs;
@@ -401,35 +483,124 @@ function drawPose(landmarks) {
         setFeedback(result.feedback);
     }
 
-    function processFrames(now) {
-        if (disposed || lifecycle !== "running" || document.hidden) return;
-        if (compositePreview &&
-            video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
-            now - lastCompositeFrameAt >= 33) {
-            lastCompositeFrameAt = now;
-            drawPose(currentLandmarks);
-        }
-        if (now - lastInferenceAt >= INFERENCE_INTERVAL_MS &&
-            video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-            lastInferenceAt = now;
-            const timestamp = Math.max(now, lastTimestamp + 1);
-            lastTimestamp = timestamp;
-            try {
-                const result = landmarker.detectForVideo(video, timestamp);
-                updateCurrentPose(result.landmarks?.[0] || null);
-            } catch (error) {
-                console.error("Pose inference error:", error);
-                endActiveInterval();
-                releaseMonitoring();
-                const message = "Pose tracking stopped unexpectedly. Restart monitoring to try again.";
-                cameraStatus.textContent = "Tracking stopped";
-                setFeedback(message);
-                setStatus("error", message);
-                return;
+    function renderPose(landmarks) {
+        try {
+            drawPose(landmarks);
+        } catch (error) {
+            console.error("Canvas pose preview rendering failed.", error);
+            if (compositingAvailable) {
+                compositingAvailable = false;
+                preview.classList.remove("monitor-preview-composited");
+                try {
+                    drawPose(landmarks);
+                } catch (overlayError) {
+                    console.error("Pose overlay could not be rendered.", overlayError);
+                }
             }
         }
-        if (isPlank) updateClock();
-        animationFrame = requestAnimationFrame(processFrames);
+    }
+
+    async function retryInferenceOnCpu(error, now) {
+        if (landmarkerDelegate !== "GPU") throw error;
+
+        console.warn("MediaPipe GPU inference failed; retrying with CPU.", error);
+        closeLandmarker();
+        const cpu = await createPoseLandmarker("CPU");
+        if (disposed || lifecycle !== "running") {
+            cpu.landmarker.close();
+            return null;
+        }
+        landmarker = cpu.landmarker;
+        landmarkerDelegate = cpu.delegate;
+        console.info("MediaPipe CPU inference fallback is active.");
+        const timestamp = Math.max(now, lastTimestamp + 1);
+        lastTimestamp = timestamp;
+        return landmarker.detectForVideo(video, timestamp);
+    }
+
+    async function processFrames(now) {
+        if (frameProcessing || disposed || lifecycle !== "running" || document.hidden) return;
+        frameProcessing = true;
+        animationFrame = null;
+
+        try {
+            const hasFrame = video.readyState >= 2 &&
+                video.videoWidth > 0 &&
+                video.videoHeight > 0;
+
+            if (compositingAvailable && hasFrame && now - lastCompositeFrameAt >= 33) {
+                lastCompositeFrameAt = now;
+                renderPose(currentLandmarks);
+            }
+
+            if (now - lastInferenceAt >= INFERENCE_INTERVAL_MS) {
+                if (!hasFrame) {
+                    if (now - lastInferenceAt >= 1000) {
+                        lastInferenceAt = now;
+                        console.warn("Pose inference waiting for camera frame.", {
+                            readyState: video.readyState,
+                            videoWidth: video.videoWidth,
+                            videoHeight: video.videoHeight
+                        });
+                    }
+                } else {
+                    lastInferenceAt = now;
+                    let timestamp = Math.max(now, lastTimestamp + 1);
+                    lastTimestamp = timestamp;
+                    let result;
+                    try {
+                        result = landmarker.detectForVideo(video, timestamp);
+                    } catch (error) {
+                        result = await retryInferenceOnCpu(error, now);
+                        timestamp = lastTimestamp;
+                    }
+                    if (result) {
+                        const landmarks = result.landmarks?.[0] || null;
+                        if (!landmarks?.length) {
+                            emptyLandmarkFrames += 1;
+                            if (emptyLandmarkFrames === 1 || emptyLandmarkFrames % 30 === 0) {
+                                console.info("MediaPipe inference returned no pose landmarks.", {
+                                    frameCount: emptyLandmarkFrames,
+                                    delegate: landmarkerDelegate,
+                                    timestamp,
+                                    videoWidth: video.videoWidth,
+                                    videoHeight: video.videoHeight,
+                                    readyState: video.readyState
+                                });
+                            }
+                        } else {
+                            emptyLandmarkFrames = 0;
+                        }
+                        try {
+                            updateCurrentPose(landmarks);
+                        } catch (error) {
+                            console.error("Pose overlay rendering failed.", error);
+                        }
+                    }
+                }
+            }
+            if (isPlank) updateClock();
+        } catch (error) {
+            console.error("Pose inference could not continue.", {
+                delegate: landmarkerDelegate,
+                readyState: video.readyState,
+                videoWidth: video.videoWidth,
+                videoHeight: video.videoHeight,
+                timestamp: lastTimestamp,
+                error
+            });
+            endActiveInterval();
+            releaseMonitoring();
+            const message = "Pose tracking stopped unexpectedly. Restart monitoring to try again.";
+            cameraStatus.textContent = "Tracking stopped";
+            setFeedback(message);
+            setStatus("error", message);
+        } finally {
+            frameProcessing = false;
+            if (!disposed && lifecycle === "running" && !document.hidden) {
+                animationFrame = requestAnimationFrame(processFrames);
+            }
+        }
     }
 
     function handleVisibilityChange() {
@@ -496,7 +667,14 @@ function drawPose(landmarks) {
             video.hidden = false;
             placeholder.hidden = true;
             await video.play();
+            await waitForVideoFrame(video);
             updatePreviewAspectRatio();
+            console.info("Camera video frame is ready for pose detection.", {
+                readyState: video.readyState,
+                videoWidth: video.videoWidth,
+                videoHeight: video.videoHeight,
+                frameRate: videoTrack.getSettings?.().frameRate
+            });
             cameraStatus.textContent = "Camera connected";
             stream.getVideoTracks().forEach(track => {
                 track.onended = () => {
@@ -509,7 +687,10 @@ function drawPose(landmarks) {
                     setStatus("error", message);
                 };
             });
-            landmarker = await createPoseLandmarker();
+            const poseLandmarker = await createPoseLandmarker();
+            landmarker = poseLandmarker.landmarker;
+            landmarkerDelegate = poseLandmarker.delegate;
+            console.info(`MediaPipe pose detection initialized with ${landmarkerDelegate}.`);
             if (disposed) {
                 releaseMonitoring();
                 return;
