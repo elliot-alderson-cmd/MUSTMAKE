@@ -75,171 +75,34 @@ function cameraErrorMessage(error) {
     return "Could not start the camera. Check your browser and camera settings, then try again.";
 }
 
-function describeDiagnosticError(error) {
-    const parts = [];
-    let current = error;
-
-    for (let depth = 0; current && depth < 3; depth += 1) {
-        const description = [
-            current.name,
-            current.message
-        ].filter(Boolean).join(": ");
-
-        if (description) {
-            parts.push(description);
-        }
-
-        current = current.cause;
-    }
-
-    return parts.join(" -> ") || String(error || "Unknown error");
-}
-
-function createDiagnosticPanel(root, cameraStatus) {
-    const panel = document.createElement("details");
-    const heading = document.createElement("summary");
-    const output = document.createElement("pre");
-    const entries = [];
-
-    panel.open = true;
-    panel.setAttribute("aria-label", "Temporary AI diagnostics");
-
-    panel.style.cssText =
-        "margin:8px 0;padding:8px 10px;background:#101010;color:#f3f4f6;border:1px solid #555;border-radius:8px;font:12px/1.4 monospace;max-width:100%;box-sizing:border-box;";
-
-    heading.textContent =
-        "Temporary AI diagnostics (remove after testing)";
-
-    heading.style.cssText =
-        "cursor:pointer;font:600 12px/1.4 sans-serif;";
-
-    output.style.cssText =
-        "margin:8px 0 0;max-height:190px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.45 monospace;";
-
-    output.textContent = "Waiting for diagnostics…";
-
-    panel.append(heading, output);
-
-    if (cameraStatus?.parentNode) {
-        cameraStatus.insertAdjacentElement("afterend", panel);
-    } else {
-        root.appendChild(panel);
-    }
-
-    function log(message, level = "info") {
-        const label =
-            level === "error"
-                ? "ERROR"
-                : level === "warn"
-                    ? "WARN"
-                    : "INFO";
-
-        const entry =
-            `${new Date().toLocaleTimeString()} ${label} ${message}`;
-
-        entries.push(entry);
-
-        if (entries.length > 18) {
-            entries.shift();
-        }
-
-        output.textContent = entries.join("\n");
-        output.scrollTop = output.scrollHeight;
-
-        const consoleMethod =
-            level === "error"
-                ? "error"
-                : level === "warn"
-                    ? "warn"
-                    : "info";
-
-        console[consoleMethod]("[MUSTMAKE AI diagnostics]", message);
-    }
-
-    return log;
-}
-
-async function createPoseLandmarker(diagnosticLog = () => {}) {
-    diagnosticLog("Loading MediaPipe vision module…");
-
+async function createPoseLandmarker() {
     const { FilesetResolver, PoseLandmarker } =
         await loadVisionModule();
-
-    diagnosticLog(
-        `MediaPipe module loaded (v${MEDIAPIPE_VERSION}).`
-    );
-
-    diagnosticLog("Loading MediaPipe WASM runtime…");
 
     const fileset = await FilesetResolver.forVisionTasks(
         MEDIAPIPE_WASM
     );
 
-    diagnosticLog("MediaPipe WASM runtime loaded.");
-
-    const useCPU =
-        /Android/i.test(navigator.userAgent) &&
-        /Brave/i.test(navigator.userAgent);
-
-    const options = {
-        baseOptions: {
-            modelAssetPath: POSE_MODEL,
-            delegate:  "CPU" 
-        },
-        runningMode: "VIDEO",
-        numPoses: 1,
-        minPoseDetectionConfidence: 0.55,
-        minPosePresenceConfidence: 0.55,
-        minTrackingConfidence: 0.55
-    };
-
     try {
-        diagnosticLog("Initializing pose model…");
-
-        const landmarker =
-            await PoseLandmarker.createFromOptions(
-                fileset,
-                options
-            );
-
-        diagnosticLog("Pose model initialized successfully.");
-
-        return landmarker;
-    } catch (gpuError) {
-        diagnosticLog(
-            `GPU initialization failed: ${describeDiagnosticError(gpuError)}. Trying CPU delegate.`,
-            "warn"
+        return await PoseLandmarker.createFromOptions(
+            fileset,
+            {
+                baseOptions: {
+                    modelAssetPath: POSE_MODEL,
+                    delegate: "CPU"
+                },
+                runningMode: "VIDEO",
+                numPoses: 1,
+                minPoseDetectionConfidence: 0.70,
+                minPosePresenceConfidence: 0.70,
+                minTrackingConfidence: 0.75
+            }
         );
-
-        try {
-            const landmarker =
-                await PoseLandmarker.createFromOptions(
-                    fileset,
-                    {
-                        ...options,
-                        baseOptions: {
-                            modelAssetPath: POSE_MODEL,
-                            delegate: "CPU"
-                        }
-                    }
-                );
-
-            diagnosticLog(
-                "Pose model initialized with CPU delegate."
-            );
-
-            return landmarker;
-        } catch (cpuError) {
-            diagnosticLog(
-                `CPU initialization failed: ${describeDiagnosticError(cpuError)}`,
-                "error"
-            );
-
-            throw new Error(
-                "Pose detection could not initialize on this device.",
-                { cause: cpuError || gpuError }
-            );
-        }
+    } catch (error) {
+        throw new Error(
+            "Pose detection could not initialize on this device.",
+            { cause: error }
+        );
     }
 }
 
@@ -279,7 +142,6 @@ export function mountAiMonitor(
     const saveMessage = root.querySelector("#monitorSaveMessage");
 
     const context = canvas.getContext("2d");
-    const diagnosticLog = createDiagnosticPanel(root, cameraStatus);
     const detector = createExerciseDetector(exercise.slug);
     const listeners = new AbortController();
 
@@ -291,10 +153,12 @@ export function mountAiMonitor(
     let disposed = false;
     let lastInferenceAt = 0;
     let lastTimestamp = 0;
+
     let elapsedMs = Math.max(
         0,
         Number(snapshot?.elapsedMs) || 0
     );
+
     let rawCount = Math.max(
         0,
         Math.min(
@@ -302,25 +166,12 @@ export function mountAiMonitor(
             Number(snapshot?.rawCount) || 0
         )
     );
+
     let saveInFlight = false;
     let cameraEnded = false;
+
     let sessionStarted = Boolean(
         snapshot?.sessionStarted || snapshot?.finished
-    );
-    let inferenceCount = 0;
-    let lastVideoReadinessLogAt = 0;
-    let firstCanvasMetricsLogged = false;
-
-    diagnosticLog(
-        `Secure context=${window.isSecureContext}; getUserMedia=${Boolean(navigator.mediaDevices?.getUserMedia)}; 2D canvas=${Boolean(context)}.`
-    );
-
-    diagnosticLog(
-        `Browser UA: ${(navigator.userAgent || "unknown").slice(0, 150)}`
-    );
-
-    diagnosticLog(
-        `Initial canvas bitmap=${canvas.width}x${canvas.height}; DPR=${window.devicePixelRatio || 1}.`
     );
 
     if (countOutput) {
@@ -448,20 +299,7 @@ export function mountAiMonitor(
             !canvas.width ||
             !canvas.height
         ) {
-            diagnosticLog(
-                `Cannot draw pose: invalid canvas geometry (CSS=${bounds.width}x${bounds.height}; bitmap=${canvas.width}x${canvas.height}).`,
-                "warn"
-            );
-
             return;
-        }
-
-        if (!firstCanvasMetricsLogged) {
-            firstCanvasMetricsLogged = true;
-
-            diagnosticLog(
-                `First pose draw: video=${video.videoWidth}x${video.videoHeight}; canvas CSS=${Math.round(bounds.width)}x${Math.round(bounds.height)}; bitmap=${canvas.width}x${canvas.height}.`
-            );
         }
 
         const scale = Math.min(
@@ -680,7 +518,6 @@ export function mountAiMonitor(
             );
 
             lastTimestamp = timestamp;
-            inferenceCount += 1;
 
             try {
                 const result = landmarker.detectForVideo(
@@ -689,47 +526,9 @@ export function mountAiMonitor(
                 );
 
                 const pose = result.landmarks?.[0] || null;
-                const poseCount = result.landmarks?.length || 0;
-                const landmarkCount = pose?.length || 0;
-
-                const visibleCount = pose
-                    ? pose.filter(
-                        landmark =>
-                            (
-                                landmark?.visibility ??
-                                landmark?.presence ??
-                                1
-                            ) >= 0.4
-                    ).length
-                    : 0;
-
-                const shouldLogInference =
-                    inferenceCount <= 3 ||
-                    (
-                        poseCount === 0 &&
-                        (
-                            inferenceCount <= 10 ||
-                            inferenceCount % 10 === 0
-                        )
-                    ) ||
-                    (
-                        poseCount > 0 &&
-                        inferenceCount % 30 === 0
-                    );
-
-                if (shouldLogInference) {
-                    diagnosticLog(
-                        `Inference #${inferenceCount}: poses=${poseCount}; landmarks=${landmarkCount}; visible>=0.4=${visibleCount}; video=${video.videoWidth}x${video.videoHeight}; readyState=${video.readyState}.`
-                    );
-                }
 
                 updateCurrentPose(pose);
             } catch (error) {
-                diagnosticLog(
-                    `Pose inference/rendering threw: ${describeDiagnosticError(error)}`,
-                    "error"
-                );
-
                 console.error("Pose inference error:", error);
 
                 endActiveInterval();
@@ -744,12 +543,6 @@ export function mountAiMonitor(
 
                 return;
             }
-        } else if (now - lastVideoReadinessLogAt >= 2500) {
-            lastVideoReadinessLogAt = now;
-
-            diagnosticLog(
-                `Waiting for video frame: readyState=${video.readyState}; dimensions=${video.videoWidth}x${video.videoHeight}; paused=${video.paused}; ended=${video.ended}.`
-            );
         }
 
         if (isPlank) {
@@ -829,8 +622,6 @@ export function mountAiMonitor(
             "Allow camera access when your browser asks. Camera video stays on this device."
         );
 
-        diagnosticLog("Monitoring startup requested.");
-
         try {
             stream = await navigator.mediaDevices.getUserMedia({
                 video: {
@@ -851,12 +642,6 @@ export function mountAiMonitor(
             }
 
             const videoTrack = stream.getVideoTracks()[0];
-            const cameraSettings =
-                videoTrack?.getSettings?.() || {};
-
-            diagnosticLog(
-                `Camera stream acquired. Track settings=${cameraSettings.width || "?"}x${cameraSettings.height || "?"}; fps=${cameraSettings.frameRate || "?"}; facing=${cameraSettings.facingMode || "?"}.`
-            );
 
             const zoomRange =
                 videoTrack.getCapabilities?.().zoom;
@@ -883,10 +668,6 @@ export function mountAiMonitor(
 
             await video.play();
 
-            diagnosticLog(
-                `video.play() resolved. Intrinsic=${video.videoWidth}x${video.videoHeight}; readyState=${video.readyState}; paused=${video.paused}.`
-            );
-
             updatePreviewAspectRatio();
 
             cameraStatus.textContent = "Camera connected";
@@ -911,9 +692,7 @@ export function mountAiMonitor(
                 };
             });
 
-            landmarker = await createPoseLandmarker(
-                diagnosticLog
-            );
+            landmarker = await createPoseLandmarker();
 
             if (disposed) {
                 releaseMonitoring();
@@ -930,12 +709,6 @@ export function mountAiMonitor(
 
             lastInferenceAt = 0;
             lastTimestamp = 0;
-            inferenceCount = 0;
-            lastVideoReadinessLogAt = 0;
-
-            diagnosticLog(
-                "Initialization complete. Starting inference loop."
-            );
 
             sessionStarted = true;
             summary.hidden = true;
@@ -952,11 +725,6 @@ export function mountAiMonitor(
                 releaseMonitoring();
                 return;
             }
-
-            diagnosticLog(
-                `Monitoring initialization failed: ${describeDiagnosticError(error)}`,
-                "error"
-            );
 
             console.error(
                 "AI monitoring initialization error:",
@@ -1380,27 +1148,8 @@ export function mountAiMonitor(
 
     video.addEventListener(
         "loadedmetadata",
-        () => {
-            diagnosticLog(
-                `Video metadata ready: ${video.videoWidth}x${video.videoHeight}; readyState=${video.readyState}.`
-            );
-
-            updatePreviewAspectRatio();
-        },
+        updatePreviewAspectRatio,
         { signal: listeners.signal }
-    );
-
-    video.addEventListener(
-        "loadeddata",
-        () => {
-            diagnosticLog(
-                `First video frame available: ${video.videoWidth}x${video.videoHeight}; readyState=${video.readyState}.`
-            );
-        },
-        {
-            signal: listeners.signal,
-            once: true
-        }
     );
 
     video.addEventListener(

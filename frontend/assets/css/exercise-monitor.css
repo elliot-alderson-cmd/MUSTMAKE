@@ -124,7 +124,7 @@
     .monitor-preview {
         width: 100%;
         max-width: 100%;
-        max-height: min(46svh, 420px);
+        max-height: min(52svh, 480px);
         margin-inline: auto;
         overflow: hidden;
     }
