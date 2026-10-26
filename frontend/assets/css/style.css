@@ -569,8 +569,8 @@ textarea {
     align-items: center;
     gap: 14px;
     padding: 13px;
-    background: rgba(22, 10, 12, 0.34);
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    
+    
     border-radius: 9px;
     transition: background-color 160ms ease, border-color 160ms ease;
 }
@@ -845,9 +845,7 @@ textarea {
 .profile-detail {
     background: rgba(22, 10, 12, 0.34);
 
-    border: 1px solid rgba(255, 255, 255, 0.16);
 
-    border-radius: 9px;
 
     padding: 17px;
 
@@ -913,7 +911,6 @@ textarea {
 
     padding: 20px;
 
-    background: rgba(22, 10, 12, 0.34);
 
     border: 1px solid rgba(255, 255, 255, 0.16);
 
@@ -3405,12 +3402,10 @@ textarea:focus {
 .public-workout-list {
     gap: 0;
 }
-
 .public-workout {
     padding: 14px 0;
-    border-bottom: 1px solid var(--glass-border);
+    border: none;
 }
-
 .login-method-toggle {
     gap: 20px;
     padding: 0;
