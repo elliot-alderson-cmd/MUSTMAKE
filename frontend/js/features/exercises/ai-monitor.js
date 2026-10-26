@@ -177,10 +177,14 @@ async function createPoseLandmarker(diagnosticLog = () => {}) {
 
     diagnosticLog("MediaPipe WASM runtime loaded.");
 
+    const useCPU =
+        /Android/i.test(navigator.userAgent) &&
+        /Brave/i.test(navigator.userAgent);
+
     const options = {
         baseOptions: {
             modelAssetPath: POSE_MODEL,
-            delegate: "GPU"
+            delegate: useCPU ? "CPU" : "GPU"
         },
         runningMode: "VIDEO",
         numPoses: 1,
@@ -190,9 +194,7 @@ async function createPoseLandmarker(diagnosticLog = () => {}) {
     };
 
     try {
-        diagnosticLog(
-            "Initializing pose model with GPU delegate…"
-        );
+        diagnosticLog("Initializing pose model…");
 
         const landmarker =
             await PoseLandmarker.createFromOptions(
@@ -200,9 +202,7 @@ async function createPoseLandmarker(diagnosticLog = () => {}) {
                 options
             );
 
-        diagnosticLog(
-            "Pose model initialized with GPU delegate."
-        );
+        diagnosticLog("Pose model initialized successfully.");
 
         return landmarker;
     } catch (gpuError) {
