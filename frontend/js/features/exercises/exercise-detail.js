@@ -3,9 +3,50 @@
 
     const EXERCISE_CACHE_KEY = "mustmake_exercises_v2";
     const LEGACY_EXERCISE_CACHE_KEY = "mustmake_exercises";
+    const PENDING_WORKOUT_KEY = "mustmake_pending_workout";
     const root = document.getElementById("exerciseDetail");
     const slug = document.body.dataset.exerciseSlug;
     if (!root || !slug) return;
+
+    function readPendingWorkout() {
+        try {
+            const pending = JSON.parse(sessionStorage.getItem(PENDING_WORKOUT_KEY) || "null");
+            if (pending?.slug !== slug ||
+                !["manual", "ai"].includes(pending.mode) ||
+                !pending.payload || typeof pending.payload !== "object") {
+                return null;
+            }
+            return pending;
+        } catch (error) {
+            console.warn("Could not read the pending workout.", error);
+            return null;
+        }
+    }
+
+    function storePendingWorkout(mode, payload) {
+        try {
+            sessionStorage.setItem(PENDING_WORKOUT_KEY, JSON.stringify({
+                slug,
+                mode,
+                payload
+            }));
+            return true;
+        } catch (error) {
+            console.warn("Could not preserve the pending workout.", error);
+            return false;
+        }
+    }
+
+    function clearPendingWorkout() {
+        try {
+            const pending = readPendingWorkout();
+            if (pending) sessionStorage.removeItem(PENDING_WORKOUT_KEY);
+        } catch (error) {
+            console.warn("Could not clear the pending workout.", error);
+        }
+    }
+
+    const pendingWorkout = readPendingWorkout();
 
     const escapeHTML = value =>
         String(value ?? "").replace(/[&<>"']/g, character => ({
@@ -223,11 +264,14 @@
         const hasAiMode = availableModes.includes("ai");
         const hasManualMode = availableModes.includes("manual");
 
-        const selectedMode = hasManualMode
-            ? "manual"
-            : hasAiMode
-                ? "ai"
-                : null;
+        const selectedMode = pendingWorkout &&
+            availableModes.includes(pendingWorkout.mode)
+            ? pendingWorkout.mode
+            : hasManualMode
+                ? "manual"
+                : hasAiMode
+                    ? "ai"
+                    : null;
 
         const modeLabel = mode => mode === "ai" ? "AI Mode" : "Manual Entry";
 
@@ -278,7 +322,10 @@
                     currentMonitor = mountAiMonitor(
                         modeContent,
                         exercise,
-                        savedMonitorSnapshot
+                        savedMonitorSnapshot,
+                        pendingWorkout?.mode === "ai" ? pendingWorkout.payload : null,
+                        payload => storePendingWorkout("ai", payload),
+                        clearPendingWorkout
                     );
 
                     savedMonitorSnapshot = null;
@@ -458,14 +505,29 @@
         const form = root.querySelector("#manualWorkoutForm");
         if (!form) return;
 
+        const message = root.querySelector("#exerciseFormMessage");
+        if (pendingWorkout?.mode === "manual") {
+            exercise.fields.forEach(field => {
+                const input = form.elements.namedItem(field.name);
+                if (input && pendingWorkout.payload[field.name] != null) {
+                    input.value = pendingWorkout.payload[field.name];
+                }
+            });
+            message.textContent = "You're signed in. Your workout is ready to save again.";
+        }
+
         form.addEventListener("submit", async event => {
             event.preventDefault();
 
-            const message = root.querySelector("#exerciseFormMessage");
             const button = form.querySelector("button[type='submit']");
             const token = localStorage.getItem("token");
 
             if (!token) {
+                const values = Object.fromEntries(new FormData(form).entries());
+                if (!storePendingWorkout("manual", values)) {
+                    message.textContent = "Could not preserve your workout. Please try again before signing in.";
+                    return;
+                }
                 message.innerHTML =
                     'Please <a href="/login">sign in</a> to save your workout.';
                 return;
@@ -497,6 +559,13 @@
                     localStorage.removeItem("token");
                     localStorage.removeItem("user");
 
+                    if (!storePendingWorkout(
+                        "manual",
+                        Object.fromEntries(new FormData(form).entries())
+                    )) {
+                        message.textContent = "Your sign-in expired, and your workout could not be preserved. Please retry before signing in.";
+                        return;
+                    }
                     message.innerHTML =
                         'Your session expired. Please <a href="/login">sign in</a> again.';
                     return;
@@ -509,6 +578,7 @@
                     return;
                 }
 
+                clearPendingWorkout();
                 form.reset();
 
                 message.innerHTML =

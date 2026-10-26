@@ -86,7 +86,14 @@ function roundedDuration(milliseconds) {
     return Math.max(0, Math.floor(milliseconds / 1000));
 }
 
-export function mountAiMonitor(root, exercise, snapshot = null) {
+export function mountAiMonitor(
+    root,
+    exercise,
+    snapshot = null,
+    pendingWorkout = null,
+    onSignInRequired = null,
+    onWorkoutSaved = null
+) {
     const isPlank = exercise.slug === "plank";
     const isJumpCount = exercise.slug === "skipping-rope";
     const video = root.querySelector("#monitorVideo");
@@ -448,6 +455,7 @@ export function mountAiMonitor(root, exercise, snapshot = null) {
         correction.value = "0";
         correctionError.textContent = "";
         saveMessage.textContent = "";
+        onWorkoutSaved?.();
         setFeedback("Session discarded. Start monitoring when you are ready.");
         setStatus("idle", "Camera off");
     }
@@ -470,16 +478,6 @@ export function mountAiMonitor(root, exercise, snapshot = null) {
         if (lifecycle !== "finished" || saveInFlight) return;
         const reviewedValue = correctedCount();
         if (reviewedValue == null) return;
-        const token = localStorage.getItem("token");
-        if (!token) {
-            saveMessage.textContent = "Please sign in to save this workout.";
-            const link = document.createElement("a");
-            link.href = "/login";
-            link.textContent = " Sign in";
-            saveMessage.append(link);
-            return;
-        }
-
         const weight = weightInput ? Number(weightInput.value) : null;
         if (weightInput && (!Number.isFinite(weight) || weight < 0.5 ||
             weight > 1000 || !Number.isInteger(weight * 2))) {
@@ -488,6 +486,30 @@ export function mountAiMonitor(root, exercise, snapshot = null) {
             return;
         }
         weightInput?.setCustomValidity("");
+
+        const payload = isPlank
+            ? { exercise: exercise.name, duration: reviewedValue }
+            : isJumpCount
+                ? { exercise: exercise.name, amount: reviewedValue, unit: "jumps" }
+                : {
+                    exercise: exercise.name,
+                    reps: reviewedValue,
+                    sets: 1,
+                    ...(weightInput ? { weight } : {})
+                };
+        const token = localStorage.getItem("token");
+        if (!token) {
+            if (!onSignInRequired?.(payload)) {
+                saveMessage.textContent = "Could not preserve this workout. Please try again before signing in.";
+                return;
+            }
+            saveMessage.textContent = "Please sign in to save this workout.";
+            const link = document.createElement("a");
+            link.href = "/login";
+            link.textContent = " Sign in";
+            saveMessage.append(link);
+            return;
+        }
 
         saveInFlight = true;
         setStatus("saving", "Saving reviewed workout…");
@@ -499,21 +521,17 @@ export function mountAiMonitor(root, exercise, snapshot = null) {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`
                 },
-                body: JSON.stringify(isPlank
-                    ? { exercise: exercise.name, duration: reviewedValue }
-                    : isJumpCount
-                        ? { exercise: exercise.name, amount: reviewedValue, unit: "jumps" }
-                    : {
-                        exercise: exercise.name,
-                        reps: reviewedValue,
-                        sets: 1,
-                        ...(weightInput ? { weight } : {})
-                    })
+                body: JSON.stringify(payload)
             });
             if (response.status === 401) {
                 window.clearPrivateCaches?.();
                 localStorage.removeItem("token");
                 localStorage.removeItem("user");
+                if (!onSignInRequired?.(payload)) {
+                    saveMessage.textContent = "Your sign-in expired, and this workout could not be preserved. Retry before signing in.";
+                    setStatus("finished", "Sign-in required to save.");
+                    return;
+                }
                 saveMessage.textContent = "Your sign-in expired. Sign in again; this reviewed session has not been discarded.";
                 const link = document.createElement("a");
                 link.href = "/login";
@@ -543,6 +561,7 @@ export function mountAiMonitor(root, exercise, snapshot = null) {
             }
 
             window.clearPrivateCaches?.();
+            onWorkoutSaved?.();
             saveMessage.textContent = "Workout saved successfully. ";
             const todayLink = document.createElement("a");
             todayLink.href = "/today";
@@ -620,6 +639,32 @@ export function mountAiMonitor(root, exercise, snapshot = null) {
         } else {
             setStatus("finished", "Session finished. Review before saving.");
         }
+    } else if (pendingWorkout) {
+        const reviewedValue = isPlank
+            ? Number(pendingWorkout.duration)
+            : isJumpCount
+                ? Number(pendingWorkout.amount)
+                : Number(pendingWorkout.reps);
+        if (isPlank) {
+            elapsedMs = reviewedValue * 1000;
+            detector.reset(elapsedMs);
+            if (timeOutput) timeOutput.textContent = formatTime(reviewedValue);
+        } else {
+            rawCount = reviewedValue;
+            detector.reset(rawCount);
+            if (countOutput) countOutput.textContent = String(rawCount);
+        }
+        summaryExercise.textContent = exercise.name;
+        summaryMetric.textContent = isPlank
+            ? formatTime(reviewedValue)
+            : String(reviewedValue);
+        correction.value = String(reviewedValue);
+        if (weightInput && Number.isFinite(Number(pendingWorkout.weight))) {
+            weightInput.value = String(pendingWorkout.weight);
+        }
+        sessionStarted = true;
+        saveMessage.textContent = "You're signed in. Review your workout and save it again.";
+        setStatus("finished", "Workout ready to save.");
     } else if (snapshot) {
         setStatus("ready", "Monitoring paused");
         setFeedback("Monitoring paused. Your detected count is retained; you can resume or finish the session.");
@@ -627,7 +672,7 @@ export function mountAiMonitor(root, exercise, snapshot = null) {
         setStatus("idle", "Camera off");
     }
 
-    if (!snapshot?.finished) void startMonitoring();
+    if (!snapshot?.finished && !pendingWorkout) void startMonitoring();
 
     return {
         dispose,
