@@ -65,6 +65,8 @@
     position: relative;
     isolation: isolate;
     display: grid;
+    width: 100%;
+    box-sizing: border-box;
     min-width: 0;
     aspect-ratio: 4 / 3;
     max-height: min(70svh, 720px);
@@ -88,8 +90,6 @@
 
 .monitor-preview video {
     z-index: 0;
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
 }
 
 .monitor-preview video[hidden],
@@ -100,8 +100,6 @@
 
 .monitor-preview canvas {
     z-index: 2;
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
     pointer-events: none;
 }
 
@@ -122,6 +120,14 @@
 .monitor-preview-placeholder > span:last-child {
     font-size: 12px;
     line-height: 1.5;
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+    .monitor-preview {
+        width: min(100%, calc(70svh * 16 / 9), 1280px);
+        aspect-ratio: 16 / 9;
+        margin-inline: auto;
+    }
 }
 
 .monitor-camera-icon {

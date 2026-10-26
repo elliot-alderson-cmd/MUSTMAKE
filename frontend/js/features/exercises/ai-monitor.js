@@ -193,10 +193,15 @@ function resizeCanvas() {
 }
 
 function updatePreviewAspectRatio() {
-    if (!video.videoWidth || !video.videoHeight) return;
+    const useLandscapePreview = window.innerWidth <= 768 ||
+        window.matchMedia("(pointer: coarse)").matches;
+    const aspectRatio = useLandscapePreview
+        ? "16 / 9"
+        : video.videoWidth && video.videoHeight
+            ? `${video.videoWidth} / ${video.videoHeight}`
+            : "4 / 3";
 
-    preview.style.aspectRatio =
-        `${video.videoWidth} / ${video.videoHeight}`;
+    preview.style.aspectRatio = aspectRatio;
 
     requestAnimationFrame(() => {
         if (!disposed) {
@@ -705,7 +710,10 @@ function drawPose(landmarks) {
     correction.addEventListener("input", correctedCount, { signal: listeners.signal });
     document.addEventListener("visibilitychange", handleVisibilityChange, { signal: listeners.signal });
     window.addEventListener("pagehide", handlePageHide, { signal: listeners.signal });
-    window.addEventListener("resize", resizeCanvas, { signal: listeners.signal });
+    window.addEventListener("resize", updatePreviewAspectRatio, { signal: listeners.signal });
+    window.addEventListener("orientationchange", updatePreviewAspectRatio, {
+        signal: listeners.signal
+    });
     video.addEventListener("loadedmetadata", updatePreviewAspectRatio, { signal: listeners.signal });
     video.addEventListener("resize", updatePreviewAspectRatio, { signal: listeners.signal });
     if ("ResizeObserver" in window) {
