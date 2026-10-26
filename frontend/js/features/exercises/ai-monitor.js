@@ -63,9 +63,9 @@ async function createPoseLandmarker() {
         baseOptions: { modelAssetPath: POSE_MODEL, delegate: "GPU" },
         runningMode: "VIDEO",
         numPoses: 1,
-        minPoseDetectionConfidence: 0.55,
-        minPosePresenceConfidence: 0.55,
-        minTrackingConfidence: 0.55
+       minPoseDetectionConfidence: 0.35,
+    minPosePresenceConfidence: 0.35,
+    minTrackingConfidence: 0.35
     };
     try {
         return await PoseLandmarker.createFromOptions(fileset, options);
