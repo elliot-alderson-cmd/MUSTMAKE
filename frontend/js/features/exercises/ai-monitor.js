@@ -194,8 +194,6 @@ export function mountAiMonitor(
 
         context.save();
         context.setTransform(ratio, 0, 0, ratio, 0, 0);
-        context.translate(bounds.width, 0);
-        context.scale(-1, 1);
         context.lineWidth = 3;
         context.lineCap = "round";
         context.strokeStyle = "rgba(74, 222, 128, 0.9)";
@@ -391,7 +389,7 @@ export function mountAiMonitor(
             const zoomRange = videoTrack.getCapabilities?.().zoom;
             if (zoomRange && Number.isFinite(zoomRange.min)) {
                 try {
-                    await videoTrack.applyConstraints({ advanced: [{ zoom: zoomRange.min }] });
+                    await videoTrack.applyConstraints({ zoom: { exact: zoomRange.min } });
                 } catch (error) {
                     console.warn("Could not set the camera to its widest zoom.", error);
                 }
@@ -637,6 +635,7 @@ export function mountAiMonitor(
     document.addEventListener("visibilitychange", handleVisibilityChange, { signal: listeners.signal });
     window.addEventListener("pagehide", handlePageHide, { signal: listeners.signal });
     window.addEventListener("resize", resizeCanvas, { signal: listeners.signal });
+    video.addEventListener("loadedmetadata", updatePreviewAspectRatio, { signal: listeners.signal });
     video.addEventListener("resize", updatePreviewAspectRatio, { signal: listeners.signal });
     if ("ResizeObserver" in window) {
         resizeObserver = new ResizeObserver(resizeCanvas);

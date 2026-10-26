@@ -27,7 +27,8 @@ export const PUSH_UP_THRESHOLDS = Object.freeze({
     settleMs: 110,
     establishMs: 250,
     returnMs: 150,
-    maxBodyLineAngle: 38
+    maxBodyLineAngle: 38,
+    minFrontViewBodyLineAngle: 52
 });
 
 export const PLANK_THRESHOLDS = Object.freeze({
@@ -271,7 +272,7 @@ export class SquatDetector extends RepDetector {
 
 export class PushUpDetector extends RepDetector {
     constructor(thresholds = PUSH_UP_THRESHOLDS) {
-        super(thresholds, "Turn side-on and hold a straight starting position in view.");
+        super(thresholds, "Face the camera or turn side-on, then hold a straight starting position in view.");
     }
 
     update(landmarks, now = performance.now()) {
@@ -293,7 +294,9 @@ export class PushUpDetector extends RepDetector {
                 Math.abs(shoulder.y - ankle.y),
                 Math.abs(shoulder.x - ankle.x)
             ) * 180 / Math.PI;
-            if (bodyLineAngle > this.thresholds.maxBodyLineAngle) continue;
+            const sideView = bodyLineAngle <= this.thresholds.maxBodyLineAngle;
+            const frontView = bodyLineAngle >= this.thresholds.minFrontViewBodyLineAngle;
+            if (!sideView && !frontView) continue;
             candidates.push(armAngle);
         }
         if (!candidates.length) {
@@ -305,7 +308,7 @@ export class PushUpDetector extends RepDetector {
         const t = this.thresholds;
 
         if (this.state === "unknown") {
-            this.feedback = "Hold a straight starting position in side view to calibrate.";
+            this.feedback = "Face the camera or turn side-on and hold a straight starting position to calibrate.";
             if (angle >= t.starting) {
                 this.holdTransition("starting", now, t.establishMs, () => {
                     this.state = "starting";
@@ -383,11 +386,11 @@ class AngleCycleDetector extends RepDetector {
         }
         const t = this.thresholds;
         const filtered = this.filteredAngle = smoothedAngle(this.filteredAngle, angle);
-        const between = (first, second) => (filtered - first) * (filtered - second) <= 0;
+        const descending = t.start > t.bottom;
 
         if (this.state === "unknown") {
             this.feedback = this.initialLabel;
-            const atStart = t.start > t.bottom
+            const atStart = descending
                 ? filtered >= t.start
                 : filtered <= t.start;
             if (atStart) {
@@ -398,7 +401,10 @@ class AngleCycleDetector extends RepDetector {
             } else this.clearPending();
         } else if (this.state === "start") {
             this.feedback = this.phaseLabels.start;
-            if (between(t.start, t.active)) {
+            const movementStarted = descending
+                ? filtered <= t.active
+                : filtered >= t.active;
+            if (movementStarted) {
                 this.holdTransition("active", now, t.settleMs, () => {
                     this.state = "active";
                     this.feedback = this.phaseLabels.active;
@@ -406,7 +412,7 @@ class AngleCycleDetector extends RepDetector {
             } else this.clearPending();
         } else if (this.state === "active") {
             this.feedback = this.phaseLabels.active;
-            const reachedBottom = t.start > t.bottom
+            const reachedBottom = descending
                 ? filtered <= t.bottom
                 : filtered >= t.bottom;
             if (reachedBottom) {
@@ -414,7 +420,7 @@ class AngleCycleDetector extends RepDetector {
                     this.state = "bottom";
                     this.feedback = this.phaseLabels.bottom;
                 });
-            } else if (t.start > t.bottom
+            } else if (descending
                 ? filtered >= t.start
                 : filtered <= t.start) {
                 this.holdTransition("start", now, t.settleMs, () => {
@@ -424,7 +430,7 @@ class AngleCycleDetector extends RepDetector {
             } else this.clearPending();
         } else if (this.state === "bottom") {
             this.feedback = this.phaseLabels.bottom;
-            const returning = t.start > t.bottom
+            const returning = descending
                 ? filtered >= t.return
                 : filtered <= t.return;
             if (returning) {
@@ -435,10 +441,10 @@ class AngleCycleDetector extends RepDetector {
             } else this.clearPending();
         } else if (this.state === "returning") {
             this.feedback = this.phaseLabels.returning;
-            const returned = t.start > t.bottom
+            const returned = descending
                 ? filtered >= t.start
                 : filtered <= t.start;
-            const returnedAgain = t.start > t.bottom
+            const returnedAgain = descending
                 ? filtered <= t.bottom
                 : filtered >= t.bottom;
             if (returned) {
@@ -458,9 +464,9 @@ class AngleCycleDetector extends RepDetector {
     }
 }
 
-function armCycleAngle(landmarks, thresholds) {
+function armCycleAngles(landmarks, thresholds) {
     const values = [];
-    for (const side of Object.values(LANDMARKS)) {
+    for (const [name, side] of Object.entries(LANDMARKS)) {
         const shoulder = landmarks?.[side.shoulder];
         const elbow = landmarks?.[side.elbow];
         const wrist = landmarks?.[side.wrist];
@@ -473,15 +479,15 @@ function armCycleAngle(landmarks, thresholds) {
         const upperArmLength = Math.hypot(shoulder.x - elbow.x, shoulder.y - elbow.y);
         const torsoLength = Math.hypot(shoulder.x - hip.x, shoulder.y - hip.y);
         if (upperArmLength < 0.025 || torsoLength < 0.06) continue;
-        values.push(angle);
+        values.push({ side: name, angle });
     }
 
-    return values.length ? average(values) : null;
+    return values;
 }
 
-function shoulderRaiseAngle(landmarks, thresholds) {
+function shoulderRaiseAngles(landmarks, thresholds) {
     const values = [];
-    for (const side of Object.values(LANDMARKS)) {
+    for (const [name, side] of Object.entries(LANDMARKS)) {
         const shoulder = landmarks?.[side.shoulder];
         const elbow = landmarks?.[side.elbow];
         const hip = landmarks?.[side.hip];
@@ -489,9 +495,9 @@ function shoulderRaiseAngle(landmarks, thresholds) {
             visible(point, thresholds.visibility)
         )) continue;
         const angle = angleAt(hip, shoulder, elbow);
-        if (angle != null) values.push(angle);
+        if (angle != null) values.push({ side: name, angle });
     }
-    return values.length ? average(values) : null;
+    return values;
 }
 
 function exerciseAngleConfig(slug) {
@@ -543,13 +549,65 @@ export class ExerciseArmDetector extends AngleCycleDetector {
             `Get into the starting position for a ${setup.config.name}.`,
             setup.phaseLabels
         );
+        this.sideDetectors = Object.fromEntries(
+            Object.keys(LANDMARKS).map(side => [side, new AngleCycleDetector(
+                setup.config,
+                `Get into the starting position for a ${setup.config.name}.`,
+                setup.phaseLabels
+            )])
+        );
+        this.lastRepAt = -Infinity;
+    }
+
+    reset(count = 0) {
+        super.reset(count);
+        for (const detector of Object.values(this.sideDetectors || {})) {
+            detector.reset();
+        }
+        this.lastRepAt = -Infinity;
+    }
+
+    loseTracking() {
+        super.loseTracking();
+        for (const detector of Object.values(this.sideDetectors || {})) {
+            detector.loseTracking();
+        }
     }
 
     update(landmarks, now = performance.now()) {
-        const angle = this.thresholds.name === "lateral raise"
-            ? shoulderRaiseAngle(landmarks, this.thresholds)
-            : armCycleAngle(landmarks, this.thresholds);
-        return this.updateAngle(angle, now);
+        const angles = this.thresholds.name === "lateral raise"
+            ? shoulderRaiseAngles(landmarks, this.thresholds)
+            : armCycleAngles(landmarks, this.thresholds);
+        const bySide = new Map(angles.map(({ side, angle }) => [side, angle]));
+        const completed = [];
+        for (const [side, detector] of Object.entries(this.sideDetectors)) {
+            const angle = bySide.get(side);
+            if (angle == null) {
+                detector.loseTracking();
+                continue;
+            }
+            const previousCount = detector.count;
+            detector.updateAngle(angle, now);
+            if (detector.count > previousCount) completed.push(detector);
+        }
+
+        if (completed.length && now - this.lastRepAt > 250) {
+            this.count += 1;
+            this.lastRepAt = now;
+        }
+
+        const activeDetectors = Object.values(this.sideDetectors)
+            .filter(detector => detector.state !== "unknown");
+        const current = activeDetectors.sort((first, second) =>
+            ["start", "active", "bottom", "returning"].indexOf(second.state) -
+            ["start", "active", "bottom", "returning"].indexOf(first.state)
+        )[0];
+        const angle = average(angles.map(value => value.angle));
+        this.state = current?.state || "unknown";
+        this.feedback = current?.feedback ||
+            "Person or required landmarks not reliably visible. Reposition in frame.";
+        this.filteredAngle = angle;
+        return this.result(angle);
     }
 }
 

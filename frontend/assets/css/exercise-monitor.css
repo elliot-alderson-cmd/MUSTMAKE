@@ -86,7 +86,7 @@
 }
 
 .monitor-preview video {
-    transform: scaleX(-1);
+    z-index: 0;
 }
 
 .monitor-preview video[hidden],
@@ -96,6 +96,7 @@
 }
 
 .monitor-preview canvas {
+    z-index: 1;
     pointer-events: none;
 }
 

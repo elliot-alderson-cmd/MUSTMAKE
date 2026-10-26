@@ -55,6 +55,29 @@ function pushUpPose(angle) {
     return setPoints(landmarks, points);
 }
 
+function frontFacingPushUpPose(angle) {
+    const landmarks = pose();
+    const wristRotation = (180 - angle) * Math.PI / 180;
+    return setPoints(landmarks, {
+        11: { x: 0.4, y: 0.22 },
+        13: { x: 0.4, y: 0.42 },
+        15: {
+            x: 0.4 + 0.2 * Math.sin(wristRotation),
+            y: 0.42 + 0.2 * Math.cos(wristRotation)
+        },
+        23: { x: 0.45, y: 0.52 },
+        27: { x: 0.48, y: 0.88 },
+        12: { x: 0.6, y: 0.22 },
+        14: { x: 0.6, y: 0.42 },
+        16: {
+            x: 0.6 - 0.2 * Math.sin(wristRotation),
+            y: 0.42 + 0.2 * Math.cos(wristRotation)
+        },
+        24: { x: 0.55, y: 0.52 },
+        28: { x: 0.52, y: 0.88 }
+    });
+}
+
 function plankPose(hipY = 0.5) {
     const landmarks = pose();
     return setPoints(landmarks, {
@@ -104,6 +127,12 @@ function armExercisePose(slug, angle) {
         landmarks[side.wrist] = { ...wrist, visibility: 0.95 };
         landmarks[side.hip] = { ...hip, visibility: 0.95 };
     }
+    return landmarks;
+}
+
+function hideArmSide(landmarks, side) {
+    const indexes = side === "left" ? [11, 13, 15, 23] : [12, 14, 16, 24];
+    for (const index of indexes) landmarks[index].visibility = 0.1;
     return landmarks;
 }
 
@@ -202,6 +231,16 @@ test("push-up detector counts a completed cycle once and rejects an incomplete m
     assert.equal(detector.count, 1);
 });
 
+test("push-up detector counts a full cycle when facing the camera", () => {
+    const detector = new PushUpDetector();
+    let time = 0;
+    for (const angle of [180, 130, 90, 130, 180, 180]) {
+        feed(detector, frontFacingPushUpPose(angle), time, 6);
+        time += 600;
+    }
+    assert.equal(detector.count, 1);
+});
+
 test("push-up detector pauses when the body landmarks are unreliable", () => {
     const detector = new PushUpDetector();
     feed(detector, pushUpPose(180), 0);
@@ -283,6 +322,37 @@ test("exercise-specific arm detectors count a full range cycle for each movement
         }
         assert.equal(detector.count, 1, `${slug} should count one complete movement`);
     }
+});
+
+test("arm detectors count movements that pass over the active angle band", () => {
+    const cases = [
+        ["pull-ups", 170, 70],
+        ["biceps-curls", 170, 60],
+        ["triceps-extension", 50, 165],
+        ["shoulder-press", 90, 175],
+        ["lateral-raises", 10, 125]
+    ];
+    for (const [slug, start, bottom] of cases) {
+        const detector = new ExerciseArmDetector(slug);
+        let time = 0;
+        for (const angle of [start, bottom, start, start]) {
+            feed(detector, armExercisePose(slug, angle), time, 7);
+            time += 700;
+        }
+        assert.equal(detector.count, 1, `${slug} should count a fast full movement`);
+    }
+});
+
+test("arm detectors track either side independently and count alternating reps", () => {
+    const detector = new ExerciseArmDetector("biceps-curls");
+    let time = 0;
+    for (const side of ["left", "right"]) {
+        for (const angle of [170, 60, 170, 170]) {
+            feed(detector, hideArmSide(armExercisePose("biceps-curls", angle), side), time, 7);
+            time += 700;
+        }
+    }
+    assert.equal(detector.count, 2);
 });
 
 test("jumping jack detector requires an open and returned closed position", () => {
