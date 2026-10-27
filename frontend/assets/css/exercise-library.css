@@ -151,22 +151,6 @@
     max-width: 900px;
 }
 
-@media (max-width: 900px) {
-    .exercise-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-@media (max-width: 560px) {
-    .exercise-grid {
-        grid-template-columns: 1fr;
-    }
-    .library-heading {
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 10px;
-    }
-}
-
 /* RESPONSIVE APP NAVIGATION AND EXERCISE CARDS */
 .exercise-library-page {
     display: flex;

@@ -73,6 +73,87 @@ a {
     color: inherit;
 }
 
+/* NAVIGATION */
+
+.topbar {
+    width: min(calc(100% - 40px), 1160px);
+    min-height: 42px;
+
+    margin: 0 auto;
+    padding: 26px 0 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    /* Same clean header style as firstdetails.html */
+    background: transparent;
+    border: none;
+    border-bottom: none;
+    box-shadow: none;
+
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+
+    position: relative;
+    top: auto;
+
+    z-index: 100;
+}
+
+.logo {
+    color: var(--text-primary);
+    text-decoration: none;
+
+    font-size: 15px;
+    font-weight: 600;
+
+    letter-spacing: 0.13em;
+
+    white-space: nowrap;
+}
+
+.topbar nav {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.topbar nav a {
+    color: var(--text-secondary);
+
+    text-decoration: none;
+
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+
+    transition: color var(--theme-transition);
+}
+
+.topbar nav a:hover,
+.topbar nav a.active {
+    color: var(--text-primary);
+}
+
+.topbar nav button {
+    background: transparent;
+
+    border: none;
+
+    color: var(--text-secondary);
+
+    font-size: 14px;
+
+    padding: 0;
+
+    transition: color var(--theme-transition);
+}
+
+.topbar nav button:hover {
+    color: var(--text-primary);
+}
+
 /* GENERAL LAYOUT */
 
 .container {
@@ -399,7 +480,6 @@ textarea {
 
     margin-bottom: 12px;
 
-    border-bottom: 1px solid #222;
 }
 
 .history-workout {
@@ -664,7 +744,6 @@ textarea {
 .social-section {
     margin: 0 0 1.5rem;
     padding-top: 1.25rem;
-    border-top: 1px solid #222;
 }
 
 .social-section h2 {
@@ -695,7 +774,7 @@ textarea {
 
     padding-bottom: 28px;
 
-    border-bottom: 1px solid #222;
+    border-bottom: none;
 }
 
 .profile-photo {
@@ -767,7 +846,7 @@ textarea {
 /* SOCIALS */
 
 .profile-socials {
-    border-top: 1px solid #222;
+    border-top: none;
 
     padding-top: 24px;
 }
@@ -830,7 +909,7 @@ textarea {
 
     padding-bottom: 28px;
 
-    border-bottom: 1px solid #222;
+    border-bottom: 0;
 }
 
 .public-profile-photo {
@@ -1595,7 +1674,7 @@ textarea:focus {
 .public-profile-header,
 .auth-divider::before,
 .auth-divider::after {
-    border-color: var(--glass-border);
+    border-color: none;
 }
 
 .history-date {
@@ -2174,9 +2253,16 @@ textarea:focus {
     border-color: var(--glass-border);
 }
 
+.main-button {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--text-on-accent);
+}
 
-
-
+.main-button:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
 
 .secondary-button,
 .google-button,
@@ -2192,9 +2278,7 @@ textarea:focus {
     background: var(--glass-subtle);
 }
 
-.error-message {
-    color: var(--danger);
-}
+
 
 @media (max-width: 800px) {
     .topbar-actions {
@@ -2965,7 +3049,6 @@ textarea:focus {
     padding: 14px 0;
     background: transparent;
     border: 0;
-    border-bottom: none;
     border-radius: 0;
     box-shadow: none;
     backdrop-filter: none;
@@ -2994,7 +3077,7 @@ textarea:focus {
 .history-date {
     margin: 0 0 6px;
     padding: 0 0 10px;
-    border-bottom: 1px solid var(--glass-border);
+    border-bottom: 0;
     color: var(--text-primary);
     font-size: 15px;
     font-weight: 600;
@@ -3003,6 +3086,7 @@ textarea:focus {
 
 .history-workout {
     padding: 12px 0;
+    border-bottom: 0;
 }
 
 .history-workout .workout-name {
@@ -3102,7 +3186,7 @@ textarea:focus {
     padding: 15px 0;
     background: transparent;
     border: 0;
-    border-bottom: none;
+    border-bottom: 1px solid var(--glass-border);
     border-radius: 0;
     box-shadow: none;
     backdrop-filter: none;
@@ -3116,7 +3200,7 @@ textarea:focus {
 
 .competition-card {
     padding: 22px 0;
-    border-bottom: none;
+    border-bottom: 1px solid var(--glass-border);
 }
 
 .competition-card-header p,
@@ -3492,6 +3576,83 @@ body {
     width: min(calc(100% - 40px), 1160px);
     min-height: 42px;
     padding: 26px 0 0;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    position: relative;
+    top: auto;
+    z-index: 100;
+}
+
+.logo {
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 750;
+    letter-spacing: 0.13em;
+    white-space: nowrap;
+}
+
+.topbar nav {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.topbar nav a,
+.topbar nav button {
+    color: var(--text-secondary);
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    padding: 0;
+    transition: color var(--theme-transition);
+}
+
+.topbar nav a:hover,
+.topbar nav a.active,
+.topbar nav button:hover {
+    color: var(--text-primary);
+    text-shadow: none;
+}
+
+@media (max-width: 520px) {
+    .topbar {
+        width: min(calc(100% - 28px), 620px);
+        min-height: 42px;
+        padding: 17px 0 0;
+    }
+
+    .topbar nav {
+        gap: 14px;
+    }
+
+    .topbar nav a,
+    .topbar nav button {
+        font-size: 12px;
+    }
+}
+
+/* GLOBAL NAVIGATION */
+
+body {
+    background: var(--page-bg);
+}
+
+.topbar {
+    width: min(calc(100% - 40px), 1160px);
+    min-height: 42px;
+    margin: 0 auto;
+    padding: 26px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     background: transparent !important;
     border: none !important;
     border-bottom: none !important;
@@ -3947,8 +4108,10 @@ body.app-page .exercise-library-page .exercise-card h3 {
         padding: clamp(16px, 3vw, 24px) 0 clamp(32px, 5vw, 44px);
     }
 
-    .exercise-library-page .exercise-library { margin-top: 0; }
-    .exercise-library-page .exercise-library { order: 1; }
+    .exercise-library-page .exercise-library {
+        margin-top: 0;
+        order: 1;
+    }
     .exercise-library-page .exercise-today-dashboard { order: 2; }
     .exercise-today-dashboard { margin-bottom: 0; }
     .exercise-section-heading { margin-bottom: clamp(11px, 3vw, 15px); }
@@ -4534,11 +4697,20 @@ nav button,
     width: 40px;
     height: 40px;
     place-items: center;
-    border: 1px solid #e8edf3;
-    border-radius: 12px;
+    border: 0;
+    border-radius: 50%;
     color: var(--text-primary);
-    background: #fff;
+    background: transparent;
     cursor: pointer;
+}
+
+.mobile-nav-close:hover {
+    background: var(--glass-subtle);
+}
+
+.mobile-nav-close:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
 }
 
 .mobile-nav-close svg {
@@ -5111,10 +5283,19 @@ body.mobile-nav-open {
     color: var(--text-primary);
 }
 
-:root[data-theme="dark"] .mobile-nav-close,
 :root[data-theme="dark"] .topbar .mobile-menu-toggle {
     border-color: var(--glass-border);
     color: var(--text-primary);
+    background: var(--glass-subtle);
+}
+
+:root[data-theme="dark"] .mobile-nav-close {
+    border: 0;
+    color: var(--text-primary);
+    background: transparent;
+}
+
+:root[data-theme="dark"] .mobile-nav-close:hover {
     background: var(--glass-subtle);
 }
 
@@ -5159,7 +5340,6 @@ body.mobile-nav-open {
 
 :root[data-theme="dark"] .competition-result {
     border: 0;
-    border-bottom: 1px solid var(--glass-border);
     border-radius: 0;
     background: transparent;
 }
@@ -5218,7 +5398,6 @@ body.app-page .exercise-library-page .exercise-card-media {
     gap: 14px;
     padding: 14px 8px;
     border: 0;
-    border-bottom: 1px solid var(--glass-border);
     border-radius: 0;
     background: transparent;
     box-shadow: none;
@@ -5349,10 +5528,7 @@ body.app-page .exercise-library-page .exercise-card-media {
 :root[data-theme="dark"] body :is(
     .card,
     .person-card,
-    .profile-card,
-    .profile-upload,
-    .exercise-detail-page .exercise-demo-panel,
-    .exercise-detail-page .exercise-workout-panel
+    .profile-upload
 ) {
     border-color: var(--glass-border);
     background: #141414;

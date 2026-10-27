@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /* ABOUT PAGE — page-specific spacing only; colors and typography use shared tokens. */
 .about-page {
     max-width: 760px;
@@ -23,3 +24,9 @@
 .about-page p + p {
     margin-top: 1rem;
 }
+=======
+/* About page stylesheet.
+ * Shared layout and typography are provided by style.css.
+ * Add only About-page-specific rules here when required.
+ */
+>>>>>>> upstream/master
