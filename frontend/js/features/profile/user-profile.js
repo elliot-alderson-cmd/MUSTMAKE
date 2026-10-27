@@ -20,8 +20,8 @@ function escapeHtml(value) {
 function formatWorkoutDate(value) {
     const date = new Date(`${value}T00:00:00`);
     return Number.isNaN(date.getTime())
-        ? escapeHtml(value)
-        : escapeHtml(date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }));
+        ? String(value ?? "")
+        : date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
 function workoutDetails(workout) {
@@ -72,11 +72,38 @@ function safeImageUrl(value) {
 
 function publicWorkoutMarkup(workout) {
     return `
-        <article class="public-workout">
-            <div><strong>${escapeHtml(workout.exercise)}</strong><time>${formatWorkoutDate(workout.date)}</time></div>
-            <p>${workoutDetails(workout)}</p>
-        </article>
+        <div class="history-workout">
+            <div class="workout-name">${escapeHtml(workout.exercise)}</div>
+            <div class="workout-details">${workoutDetails(workout)}</div>
+        </div>
     `;
+}
+
+function appendPublicWorkouts(list, workouts) {
+    if (!workouts.length) return;
+
+    list.querySelector(".no-workout")?.remove();
+    list.querySelector(".history-load-more")?.remove();
+
+    workouts.forEach(workout => {
+        const date = String(workout.date || "");
+        let day = Array.from(list.querySelectorAll(".history-day"))
+            .find(element => element.dataset.date === date);
+
+        if (!day) {
+            day = document.createElement("div");
+            day.className = "history-day";
+            day.dataset.date = date;
+
+            const heading = document.createElement("div");
+            heading.className = "history-date";
+            heading.textContent = formatWorkoutDate(date);
+            day.appendChild(heading);
+            list.appendChild(day);
+        }
+
+        day.insertAdjacentHTML("beforeend", publicWorkoutMarkup(workout));
+    });
 }
 
 function setPublicHistoryCursor(list, cursor) {
@@ -124,10 +151,7 @@ async function loadMorePublicHistory(event) {
         }
 
         const list = profileRoot.querySelector(".public-workout-list");
-        list.insertAdjacentHTML(
-            "beforeend",
-            data.workoutHistory.map(publicWorkoutMarkup).join("")
-        );
+        appendPublicWorkouts(list, data.workoutHistory);
         setPublicHistoryCursor(list, data.workoutHistoryNextCursor);
     } catch (error) {
         console.error("Public workout history error:", error);
@@ -167,7 +191,7 @@ function displayProfile({ user, workoutHistory = [], workoutHistoryNextCursor = 
         .filter(Boolean)
         .join("");
     const history = workoutHistory.length
-        ? workoutHistory.map(publicWorkoutMarkup).join("")
+        ? ""
         : '<p class="no-workout">No workouts recorded yet.</p>';
 
     profileRoot.innerHTML = `
@@ -185,6 +209,10 @@ function displayProfile({ user, workoutHistory = [], workoutHistoryNextCursor = 
         </section>
     `;
 
+    appendPublicWorkouts(
+        profileRoot.querySelector(".public-workout-list"),
+        workoutHistory
+    );
     setPublicHistoryCursor(
         profileRoot.querySelector(".public-workout-list"),
         workoutHistoryNextCursor

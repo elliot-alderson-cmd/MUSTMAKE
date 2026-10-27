@@ -392,6 +392,17 @@ const socialDialog = document.getElementById("socialDialog");
 const socialUrlInput = document.getElementById("socialUrlInput");
 const socialMessage = document.getElementById("socialDialogMessage");
 const savedSocialLinks = document.getElementById("savedSocialLinks");
+const socialDialogHistoryKey = "mustmakeSocialDialog";
+let socialDialogBusy = false;
+
+function closeSocialDialog() {
+    if (socialDialogBusy) return;
+    socialDialog.hidden = true;
+    document.getElementById("addProfileSocial").focus();
+    if (window.history.state?.[socialDialogHistoryKey]) {
+        window.history.back();
+    }
+}
 
 function getProfileSocials() {
     const socials = profileData.user.socials;
@@ -427,7 +438,7 @@ function renderSavedSocialLinks() {
                 button.disabled = true;
             });
             document.getElementById("saveProfileSocial").disabled = true;
-            document.getElementById("cancelProfileSocial").disabled = true;
+            socialDialogBusy = true;
             socialMessage.textContent = "Removing link…";
             try {
                 await updateProfile({ socials: links.filter((_, linkIndex) => linkIndex !== index) });
@@ -441,7 +452,7 @@ function renderSavedSocialLinks() {
                 });
             } finally {
                 document.getElementById("saveProfileSocial").disabled = false;
-                document.getElementById("cancelProfileSocial").disabled = false;
+                socialDialogBusy = false;
             }
         });
         row.append(link, removeButton);
@@ -453,13 +464,19 @@ document.getElementById("addProfileSocial").addEventListener("click", () => {
     socialUrlInput.value = "";
     socialMessage.textContent = "";
     renderSavedSocialLinks();
+    window.history.pushState(
+        { ...window.history.state, [socialDialogHistoryKey]: true },
+        "",
+        location.href
+    );
     socialDialog.hidden = false;
     socialUrlInput.focus();
 });
 
-document.getElementById("cancelProfileSocial").addEventListener("click", () => {
-    socialDialog.hidden = true;
-    document.getElementById("addProfileSocial").focus();
+socialDialog.addEventListener("click", event => {
+    if (event.target === socialDialog) {
+        closeSocialDialog();
+    }
 });
 
 document.getElementById("saveProfileSocial").addEventListener("click", async () => {
@@ -481,13 +498,16 @@ document.getElementById("saveProfileSocial").addEventListener("click", async () 
     }
 
     const saveButton = document.getElementById("saveProfileSocial");
-    const cancelButton = document.getElementById("cancelProfileSocial");
     saveButton.disabled = true;
-    cancelButton.disabled = true;
+    socialDialogBusy = true;
     socialMessage.textContent = "Adding link…";
     try {
         await updateProfile({ socials: [...existing.filter(Boolean), url] });
+        socialDialogBusy = false;
         socialDialog.hidden = true;
+        if (window.history.state?.[socialDialogHistoryKey]) {
+            window.history.back();
+        }
         if (document.getElementById("addProfileSocial").disabled) {
             document.querySelector("#socialLinks a:last-child")?.focus();
         } else {
@@ -497,9 +517,22 @@ document.getElementById("saveProfileSocial").addEventListener("click", async () 
         console.error("Social link update error:", error);
         socialMessage.textContent = error.message;
     } finally {
+        socialDialogBusy = false;
         saveButton.disabled = false;
-        cancelButton.disabled = false;
     }
+});
+
+window.addEventListener("popstate", () => {
+    if (socialDialog.hidden) return;
+    if (socialDialogBusy) {
+        window.history.pushState(
+            { ...window.history.state, [socialDialogHistoryKey]: true },
+            "",
+            location.href
+        );
+        return;
+    }
+    closeSocialDialog();
 });
 
 document.addEventListener("keydown", event => {
@@ -507,10 +540,7 @@ document.addEventListener("keydown", event => {
     if (!photoDialog.hidden) {
         closePhotoDialog();
     }
-    if (!socialDialog.hidden && !document.getElementById("cancelProfileSocial").disabled) {
-        socialDialog.hidden = true;
-        document.getElementById("addProfileSocial").focus();
-    }
+    if (!socialDialog.hidden) closeSocialDialog();
 });
 
 loadProfile();
