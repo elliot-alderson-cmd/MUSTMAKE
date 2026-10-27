@@ -28,6 +28,27 @@
     overflow-wrap: anywhere;
 }
 
+.profile-name-trigger {
+    padding: 0;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+    letter-spacing: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.profile-name-trigger:hover {
+    opacity: 0.82;
+}
+
+.profile-name-trigger:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 4px;
+    border-radius: 2px;
+}
+
 .profile-container .profile-details {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -341,91 +362,6 @@
     font: inherit;
 }
 
-.profile-metric-editor {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    min-height: 36px;
-}
-
-.profile-metric-editor[hidden] {
-    display: none;
-}
-
-.profile-metric-editor input {
-    width: 5.5rem;
-    min-width: 0;
-    min-height: 44px;
-    height: 44px;
-    padding: 0.25rem 0;
-    border: 0;
-    border-bottom: none;
-    border-radius: 0;
-    color: var(--text-primary);
-    background: transparent;
-    box-shadow: none;
-    font: inherit;
-    font-variant-numeric: tabular-nums;
-}
-
-.profile-metric-editor input:focus {
-    border-bottom-color: var(--text-primary);
-    background: transparent;
-    box-shadow: none;
-}
-
-.profile-metric-editor input:focus-visible {
-    outline: none;
-}
-
-.profile-metric-actions {
-    display: inline-flex;
-    align-items: center;
-}
-
-.profile-metric-actions button {
-    display: inline-grid;
-    width: 44px;
-    min-width: 44px;
-    height: 44px;
-    min-height: 44px;
-    place-items: center;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    color: var(--text-primary);
-    background: transparent;
-    font: inherit;
-    font-size: 1.1rem;
-    cursor: pointer;
-}
-
-.profile-metric-actions .metric-confirm {
-    color: #65c985;
-}
-
-.profile-metric-actions button:hover:not(:disabled) {
-    background: var(--glass-subtle);
-}
-
-.profile-metric-actions button:disabled {
-    opacity: 0.5;
-    cursor: wait;
-}
-
-.metric-status {
-    position: absolute;
-    top: calc(100% + 0.1rem);
-    left: 0;
-    width: max-content;
-    max-width: min(12rem, 75vw);
-    color: var(--text-secondary);
-    font-size: 0.75rem;
-    text-align: left;
-    z-index: 1;
-}
-
 .social-section-heading {
     display: flex;
     align-items: center;
@@ -486,6 +422,7 @@
 }
 
 .profile-photo-dialog,
+.profile-value-dialog,
 .profile-social-dialog {
     width: min(100%, 380px);
     padding: 1.25rem;
@@ -523,6 +460,80 @@
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     box-shadow: none;
+}
+
+.profile-value-dialog {
+    width: min(100%, 620px);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+}
+
+.profile-value-dialog h2 {
+    margin-bottom: 0.85rem;
+    color: var(--text-primary);
+    font-size: 1.05rem;
+    font-weight: 500;
+    text-align: left;
+}
+
+.profile-value-dialog input {
+    width: 100%;
+    min-height: 46px;
+    padding: 0.65rem 0;
+    border: 0;
+    border-radius: 0;
+    color: var(--text-primary);
+    background: transparent;
+    box-shadow: none;
+    caret-color: var(--text-primary);
+}
+
+.profile-value-dialog input:focus {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.profile-value-dialog input:focus-visible {
+    outline: none;
+}
+
+.profile-value-hint {
+    margin: -0.15rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.015em;
+}
+
+.profile-value-hint[hidden] {
+    display: none;
+}
+
+.profile-value-dialog .profile-interaction-actions {
+    justify-content: flex-start;
+}
+
+.profile-value-dialog .profile-interaction-actions button {
+    min-height: 44px;
+    padding: 0 2px;
+    border: 0;
+    border-radius: 0;
+    color: var(--text-primary);
+    background: transparent;
+    box-shadow: none;
+}
+
+.profile-value-dialog .profile-interaction-actions button:hover:not(:disabled) {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    text-decoration: underline;
+    text-underline-offset: 4px;
 }
 
 .profile-photo-dialog h2,
@@ -733,6 +744,7 @@
 }
 
 .profile-photo-dialog .main-button,
+.profile-value-dialog .main-button,
 .profile-social-dialog .main-button {
     border-color:none;
     color: var(--text-primary);
@@ -740,15 +752,25 @@
 }
 
 .profile-photo-dialog .main-button:hover:not(:disabled),
+.profile-value-dialog .main-button:hover:not(:disabled),
 .profile-social-dialog .main-button:hover:not(:disabled) {
     background: color-mix(in srgb, var(--text-primary) 16%, transparent);
 }
 
 .profile-photo-dialog .secondary-button,
+.profile-value-dialog .secondary-button,
 .profile-social-dialog .secondary-button {
     border-color: transparent;
     color: var(--text-secondary);
     background: transparent;
+}
+
+.profile-value-dialog .profile-interaction-actions button:hover:not(:disabled) {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    text-decoration: underline;
+    text-underline-offset: 4px;
 }
 
 .profile-interaction-actions button:disabled {

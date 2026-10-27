@@ -3046,6 +3046,17 @@ textarea:focus {
     box-shadow: none;
 }
 
+#profileForm #age:focus,
+#profileForm #height:focus,
+#profileForm #weight:focus,
+#profileForm #age:focus-visible,
+#profileForm #height:focus-visible,
+#profileForm #weight:focus-visible {
+    border-color: var(--glass-border);
+    outline: none;
+    box-shadow: none;
+}
+
 .workout-item,
 .history-workout {
     display: flex;

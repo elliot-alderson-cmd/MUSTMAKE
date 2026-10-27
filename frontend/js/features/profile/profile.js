@@ -66,7 +66,8 @@ let profileData = null;
 function renderProfile(data) {
     profileData = data;
     const user = data.user;
-    document.getElementById("profileName").textContent = user.name;
+    document.getElementById("profileNameEdit").textContent = user.name;
+    document.getElementById("profileNameEdit").disabled = false;
     document.getElementById("profileUsername").textContent = `@${user.username}`;
 
     const age = Number.isInteger(user.age) ? user.age : null;
@@ -134,7 +135,7 @@ async function loadProfile() {
     } catch (error) {
         console.error(error);
         if (!cachedProfile) {
-            document.getElementById("profileName").textContent =
+            document.getElementById("profileNameEdit").textContent =
                 "Could not load profile.";
         }
     }
@@ -186,16 +187,6 @@ function makeButton(label, className, text) {
     return button;
 }
 
-function closeMetricEditor(metric, focus = true) {
-    const section = document.getElementById(`profile${metric[0].toUpperCase()}${metric.slice(1)}Section`);
-    const trigger = section.querySelector(`[data-profile-metric="${metric}"]`);
-    const editor = section.querySelector(`[data-metric-editor="${metric}"]`);
-    editor.hidden = true;
-    editor.replaceChildren();
-    trigger.hidden = false;
-    if (focus) trigger.focus();
-}
-
 async function updateProfile(payload) {
     const response = await fetch(`${window.API_URL}/api/profile`, {
         method: "PUT",
@@ -216,82 +207,126 @@ async function updateProfile(payload) {
     }
 
     const updatedData = { ...profileData, ...data, user: data.user };
+    if (payload.name !== undefined && profileData?.user?.name !== data.user?.name) {
+        window.clearPrivateCaches();
+    }
     writeProfileCache(updatedData);
+    try {
+        const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+        const storedUserId = storedUser?._id ?? storedUser?.id;
+        const updatedUserId = data.user?._id ?? data.user?.id;
+        if (
+            storedUser &&
+            storedUserId != null &&
+            updatedUserId != null &&
+            String(storedUserId) === String(updatedUserId)
+        ) {
+            localStorage.setItem("user", JSON.stringify({ ...storedUser, ...data.user }));
+        }
+    } catch (error) {
+        console.warn("Could not update the cached user.", error);
+    }
     renderProfile(updatedData);
     return data.user;
 }
 
-async function saveMetric(metric, input, saveButton, cancelButton, message) {
-    if (!input.reportValidity()) return;
+const profileValueDialog = document.getElementById("profileValueDialog");
+const profileValueDialogTitle = document.getElementById("profileValueDialogTitle");
+const profileValueInput = document.getElementById("profileValueInput");
+const profileValueHint = document.getElementById("profileValueHint");
+const profileValueMessage = document.getElementById("profileValueMessage");
+const saveProfileValueButton = document.getElementById("saveProfileValue");
+let activeProfileValue = null;
+let activeProfileValueTrigger = null;
+let profileValueSaving = false;
 
-    saveButton.disabled = true;
-    cancelButton.disabled = true;
-    message.textContent = "Saving…";
+function closeProfileValueDialog() {
+    if (profileValueSaving) return;
+    profileValueDialog.hidden = true;
+    profileValueMessage.textContent = "";
+    activeProfileValueTrigger?.focus();
+    activeProfileValue = null;
+    activeProfileValueTrigger = null;
+}
+
+async function saveProfileValue() {
+    const value = profileValueInput.value.trim();
+    profileValueInput.setCustomValidity(value ? "" : "Value cannot be empty.");
+    if (!profileValueInput.reportValidity()) return;
+
+    profileValueSaving = true;
+    saveProfileValueButton.disabled = true;
+    profileValueMessage.textContent = "Saving…";
     try {
-        await updateProfile({ [metric]: input.value });
-        closeMetricEditor(metric);
+        await updateProfile({ [activeProfileValue]: value });
+        profileValueSaving = false;
+        closeProfileValueDialog();
     } catch (error) {
-        console.error("Profile detail update error:", error);
-        message.textContent = error.message;
-        saveButton.disabled = false;
-        cancelButton.disabled = false;
+        console.error(`Profile ${activeProfileValue} update error:`, error);
+        profileValueMessage.textContent = error.message;
+    } finally {
+        profileValueSaving = false;
+        saveProfileValueButton.disabled = false;
     }
 }
 
-function openMetricEditor(metric, trigger) {
-    document.querySelectorAll(".profile-metric-editor:not([hidden])").forEach(editor => {
-        const activeMetric = editor.dataset.metricEditor;
-        closeMetricEditor(activeMetric, false);
-    });
-
-    const section = trigger.closest(".social-sections");
-    const editor = section.querySelector(`[data-metric-editor="${metric}"]`);
-    const rules = metricRules[metric];
-    const input = document.createElement("input");
-    input.type = "number";
-    input.inputMode = rules.inputmode;
-    input.min = rules.min;
-    input.max = rules.max;
-    input.step = rules.step;
-    input.required = true;
-    input.value = profileData.user[metric] ?? "";
-    input.setAttribute("aria-label", `New ${metric}`);
-
-    const actions = document.createElement("span");
-    actions.className = "profile-metric-actions";
-    const saveButton = makeButton(`Save ${metric}`, "metric-confirm", "✓");
-    const cancelButton = makeButton(`Cancel ${metric} change`, "metric-cancel", "×");
-    const message = document.createElement("span");
-    message.className = "metric-status";
-    message.setAttribute("role", "status");
-    message.setAttribute("aria-live", "polite");
-
-    saveButton.addEventListener("click", () =>
-        saveMetric(metric, input, saveButton, cancelButton, message)
-    );
-    cancelButton.addEventListener("click", () => closeMetricEditor(metric));
-    input.addEventListener("keydown", event => {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            saveButton.click();
-        } else if (event.key === "Escape") {
-            closeMetricEditor(metric);
-        }
-    });
-
-    actions.append(saveButton, cancelButton);
-    editor.replaceChildren(input, actions, message);
-    editor.hidden = false;
-    trigger.hidden = true;
-    input.focus();
-    input.select();
+function openProfileValueDialog(field, trigger) {
+    const rules = metricRules[field];
+    activeProfileValue = field;
+    activeProfileValueTrigger = trigger;
+    profileValueDialogTitle.textContent = `Change ${field}`;
+    profileValueInput.type = rules ? "number" : "text";
+    profileValueInput.inputMode = rules?.inputmode || "text";
+    profileValueInput.removeAttribute("min");
+    profileValueInput.removeAttribute("max");
+    profileValueInput.removeAttribute("step");
+    profileValueInput.removeAttribute("maxlength");
+    if (rules) {
+        profileValueInput.autocomplete = "off";
+        profileValueInput.min = rules.min;
+        profileValueInput.max = rules.max;
+        profileValueInput.step = rules.step;
+    } else {
+        profileValueInput.maxLength = 100;
+        profileValueInput.autocomplete = "name";
+    }
+    profileValueInput.setAttribute("aria-label", `New ${field}`);
+    profileValueInput.value = profileData.user[field] ?? "";
+    profileValueInput.setCustomValidity("");
+    profileValueHint.hidden = field !== "age";
+    profileValueMessage.textContent = "";
+    profileValueDialog.hidden = false;
+    profileValueInput.focus();
+    profileValueInput.select();
 }
 
 document.getElementById("profileDetails").addEventListener("click", event => {
     const trigger = event.target.closest("[data-profile-metric]");
     if (trigger && !trigger.disabled) {
-        openMetricEditor(trigger.dataset.profileMetric, trigger);
+        openProfileValueDialog(trigger.dataset.profileMetric, trigger);
     }
+});
+
+document.getElementById("profileNameEdit").addEventListener("click", event => {
+    openProfileValueDialog("name", event.currentTarget);
+});
+
+profileValueInput.addEventListener("input", () => {
+    profileValueInput.setCustomValidity(
+        profileValueInput.value.trim() ? "" : "Value cannot be empty."
+    );
+});
+profileValueInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        saveProfileValueButton.click();
+    } else if (event.key === "Escape") {
+        closeProfileValueDialog();
+    }
+});
+saveProfileValueButton.addEventListener("click", saveProfileValue);
+profileValueDialog.addEventListener("click", event => {
+    if (event.target === profileValueDialog) closeProfileValueDialog();
 });
 
 const photoDialog = document.getElementById("profilePhotoDialog");
@@ -482,7 +517,7 @@ socialDialog.addEventListener("click", event => {
 document.getElementById("saveProfileSocial").addEventListener("click", async () => {
     const url = safeSocialUrl(socialUrlInput.value.trim());
     if (!url) {
-        socialMessage.textContent = "Enter a valid HTTP or HTTPS URL.";
+        socialMessage.textContent = "Enter a valid URL.";
         socialUrlInput.focus();
         return;
     }
@@ -537,6 +572,7 @@ window.addEventListener("popstate", () => {
 
 document.addEventListener("keydown", event => {
     if (event.key !== "Escape") return;
+    if (!profileValueDialog.hidden) closeProfileValueDialog();
     if (!photoDialog.hidden) {
         closePhotoDialog();
     }
