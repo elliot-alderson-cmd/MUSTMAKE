@@ -475,11 +475,16 @@ textarea {
 
     font-size: 19px;
 
-
     padding-bottom: 11px;
 
     margin-bottom: 12px;
 
+}
+
+.history-day + .history-day .history-date {
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    padding-top: 14px;
+    margin-top: 18px;
 }
 
 .history-workout {
@@ -934,6 +939,8 @@ textarea {
 
 .public-workout-history {
     margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--glass-border);
 }
 
 .public-workout-history h2 {
@@ -3639,81 +3646,6 @@ body {
     }
 }
 
-/* GLOBAL NAVIGATION */
-
-body {
-    background: var(--page-bg);
-}
-
-.topbar {
-    width: min(calc(100% - 40px), 1160px);
-    min-height: 42px;
-    margin: 0 auto;
-    padding: 26px 0 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: transparent !important;
-    border: none !important;
-    border-bottom: none !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    position: relative;
-    top: auto;
-    z-index: 100;
-}
-
-.logo {
-    color: var(--text-primary);
-    text-decoration: none;
-    font-size: 15px;
-    font-weight: 750;
-    letter-spacing: 0.13em;
-    white-space: nowrap;
-}
-
-.topbar nav {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-}
-
-.topbar nav a,
-.topbar nav button {
-    color: var(--text-secondary);
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-    padding: 0;
-    transition: color var(--theme-transition);
-}
-
-.topbar nav a:hover,
-.topbar nav a.active,
-.topbar nav button:hover {
-    color: var(--text-primary);
-    text-shadow: none;
-}
-
-@media (max-width: 520px) {
-    .topbar {
-        width: min(calc(100% - 28px), 620px);
-        min-height: 42px;
-        padding: 17px 0 0;
-    }
-    .topbar nav {
-        gap: 14px;
-    }
-    .topbar nav a,
-    .topbar nav button {
-        font-size: 12px;
-    }
-}
 /* exercise-library.css */
 /* PUBLIC EXERCISE LIBRARY */
 /* Exercise demonstration videos */
@@ -5513,7 +5445,6 @@ body.app-page .exercise-library-page .exercise-card-media {
     .exercise-library-groups,
     .exercise-section,
     .workout-section,
-    .public-workout-history,
     .social-section,
     .competition-people,
     .competition-search-area,
