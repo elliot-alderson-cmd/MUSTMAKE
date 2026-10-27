@@ -27,7 +27,9 @@
                 </button>
             </div>
 
-            <h1 id="profileName">Hello</h1>
+            <h1 id="profileName">
+                <button type="button" id="profileNameEdit" class="profile-name-trigger" aria-label="Edit your name" disabled>Hello</button>
+            </h1>
             <p id="profileUsername" class="profile-username">@username</p>
 
             <p id="profileIs" hidden>is</p>
@@ -37,21 +39,18 @@
                         <strong id="profileAge"></strong>
                     </button>
                     <span>years old</span>
-                    <div class="profile-metric-editor" data-metric-editor="age" hidden></div>
                 </div>
                 <div class="social-sections" id="profileHeightSection" hidden>
                     <button type="button" class="profile-metric-value" data-profile-metric="height" aria-label="Edit height" disabled>
                         <strong id="profileHeight"></strong>
                     </button>
                     <span>cm tall</span>
-                    <div class="profile-metric-editor" data-metric-editor="height" hidden></div>
                 </div>
                 <div class="social-sections" id="profileWeightSection" hidden>
                     <button type="button" class="profile-metric-value" data-profile-metric="weight" aria-label="Edit weight" disabled>
                         <strong id="profileWeight"></strong>
                     </button>
                     <span>kg</span>
-                    <div class="profile-metric-editor" data-metric-editor="weight" hidden></div>
                 </div>
             </div>
 
@@ -98,6 +97,18 @@
             <p id="socialDialogMessage" class="profile-interaction-message" role="status" aria-live="polite"></p>
             <div class="profile-interaction-actions">
                 <button type="button" id="saveProfileSocial" class="main-button">Add link</button>
+            </div>
+        </section>
+    </div>
+
+    <div id="profileValueDialog" class="profile-interaction-overlay" hidden>
+        <section class="profile-value-dialog" role="dialog" aria-modal="true" aria-labelledby="profileValueDialogTitle">
+            <h2 id="profileValueDialogTitle">Change name</h2>
+            <input id="profileValueInput" type="text" autocomplete="name" maxlength="100" required aria-label="Name">
+            <p id="profileValueHint" class="profile-value-hint" hidden>Age increments every January.</p>
+            <p id="profileValueMessage" class="profile-interaction-message" role="status" aria-live="polite"></p>
+            <div class="profile-interaction-actions">
+                <button type="button" id="saveProfileValue" class="main-button">Change</button>
             </div>
         </section>
     </div>

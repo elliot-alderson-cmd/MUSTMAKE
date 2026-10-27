@@ -29,15 +29,20 @@
     window.addEventListener("storage", event => {
         if (event.key !== "user") return;
 
-        const parseUserId = value => {
+        const parseUser = value => {
             try {
-                return getUserId(JSON.parse(value || "null"));
+                return JSON.parse(value || "null");
             } catch {
                 return null;
             }
         };
 
-        if (parseUserId(event.oldValue) !== parseUserId(event.newValue)) {
+        const previousUser = parseUser(event.oldValue);
+        const nextUser = parseUser(event.newValue);
+        if (
+            getUserId(previousUser) !== getUserId(nextUser) ||
+            previousUser?.name !== nextUser?.name
+        ) {
             window.clearPrivateCaches();
         }
     });
