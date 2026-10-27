@@ -100,7 +100,6 @@ a {
     /* Same clean header style as firstdetails.html */
     background: transparent;
     border: none;
-    border-bottom: none;
     box-shadow: none;
 
     backdrop-filter: none;
@@ -2331,10 +2330,7 @@ textarea:focus {
     color: var(--text-on-accent);
 }
 
-.main-button:hover {
-    background: var(--accent-hover);
-    border-color: var(--accent-hover);
-}
+
 
 .secondary-button,
 .google-button,
@@ -2350,9 +2346,7 @@ textarea:focus {
     background: var(--glass-subtle);
 }
 
-.error-message {
-    color: var(--danger);
-}
+
 
 @media (max-width: 800px) {
     .topbar-actions {
@@ -3136,7 +3130,6 @@ textarea:focus {
     padding: 14px 0;
     background: transparent;
     border: 0;
-    border-bottom: 1px solid var(--glass-border);
     border-radius: 0;
     box-shadow: none;
     backdrop-filter: none;
@@ -3265,9 +3258,6 @@ textarea:focus {
 .competition-results {
     width: min(560px, 100%);
     margin-top: 14px;
-}
-
-.competition-results {
     gap: 0;
 }
 
@@ -3276,7 +3266,6 @@ textarea:focus {
     padding: 15px 0;
     background: transparent;
     border: 0;
-    border-bottom: 1px solid var(--glass-border);
     border-radius: 0;
     box-shadow: none;
     backdrop-filter: none;
@@ -3290,7 +3279,6 @@ textarea:focus {
 
 .competition-card {
     padding: 22px 0;
-    border-bottom: 1px solid var(--glass-border);
 }
 
 .competition-card-header p,
@@ -3675,7 +3663,6 @@ body {
     /* Minimal navigation with a red-tinted dark background */
     background: transparent !important;
     border: none !important;
-    border-bottom: none !important;
     box-shadow: none !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
@@ -3738,81 +3725,6 @@ body {
     }
 }
 
-/* GLOBAL NAVIGATION */
-
-body {
-    background: var(--page-bg);
-}
-
-.topbar {
-    width: min(calc(100% - 40px), 1160px);
-    min-height: 42px;
-    margin: 0 auto;
-    padding: 26px 0 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: transparent !important;
-    border: none !important;
-    border-bottom: none !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    position: relative;
-    top: auto;
-    z-index: 100;
-}
-
-.logo {
-    color: var(--text-primary);
-    text-decoration: none;
-    font-size: 15px;
-    font-weight: 750;
-    letter-spacing: 0.13em;
-    white-space: nowrap;
-}
-
-.topbar nav {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-}
-
-.topbar nav a,
-.topbar nav button {
-    color: var(--text-secondary);
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-    padding: 0;
-    transition: color var(--theme-transition);
-}
-
-.topbar nav a:hover,
-.topbar nav a.active,
-.topbar nav button:hover {
-    color: var(--text-primary);
-    text-shadow: none;
-}
-
-@media (max-width: 520px) {
-    .topbar {
-        width: min(calc(100% - 28px), 620px);
-        min-height: 42px;
-        padding: 17px 0 0;
-    }
-    .topbar nav {
-        gap: 14px;
-    }
-    .topbar nav a,
-    .topbar nav button {
-        font-size: 12px;
-    }
-}
 /* exercise-library.css */
 /* PUBLIC EXERCISE LIBRARY */
 /* Exercise demonstration videos */
@@ -4214,8 +4126,10 @@ body.app-page .exercise-library-page .exercise-card h3 {
         padding: clamp(16px, 3vw, 24px) 0 clamp(32px, 5vw, 44px);
     }
 
-    .exercise-library-page .exercise-library { margin-top: 0; }
-    .exercise-library-page .exercise-library { order: 1; }
+    .exercise-library-page .exercise-library {
+        margin-top: 0;
+        order: 1;
+    }
     .exercise-library-page .exercise-today-dashboard { order: 2; }
     .exercise-today-dashboard { margin-bottom: 0; }
     .exercise-section-heading { margin-bottom: clamp(11px, 3vw, 15px); }
@@ -5428,7 +5342,6 @@ body.mobile-nav-open {
 
 :root[data-theme="dark"] .competition-result {
     border: 0;
-    border-bottom: 1px solid var(--glass-border);
     border-radius: 0;
     background: transparent;
 }
@@ -5488,7 +5401,6 @@ body.app-page .exercise-library-page .exercise-card-media {
     gap: 14px;
     padding: 14px 8px;
     border: 0;
-    border-bottom: 1px solid var(--glass-border);
     border-radius: 0;
     background: transparent;
     box-shadow: none;

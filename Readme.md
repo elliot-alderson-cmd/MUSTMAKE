@@ -57,7 +57,9 @@ MUSTMAKE/
 │   ├── assets/
 │   │   ├── css/
 │   │   │   ├── style.css
-│   │   │   └── topic-specific stylesheets
+│   │   │   ├── profiles.css
+│   │   │   ├── exercise-monitor.css
+│   │   │   └── about.css
 │   │   └── images/
 │   └── js/
 │       ├── core/change_backend_url.js
