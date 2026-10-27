@@ -39,18 +39,13 @@ html {
 }
 
 body {
-    font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
 
-    background: var(--page-bg);
     color: var(--text-primary);
 
     min-height: 100vh;
 
-    font-size: 16px;
-    font-weight: 400;
-    line-height: 1.6;
 }
 
 h1,
@@ -59,10 +54,7 @@ h3,
 h4,
 h5,
 h6 {
-    font-family: var(--font-display);
     color: var(--text-primary);
-    font-weight: 500;
-    letter-spacing: -0.02em;
     line-height: 1.25;
 }
 .app-page {
@@ -82,87 +74,6 @@ button {
 
 a {
     color: inherit;
-}
-
-/* NAVIGATION */
-
-.topbar {
-    width: min(calc(100% - 40px), 1160px);
-    min-height: 42px;
-
-    margin: 0 auto;
-    padding: 26px 0 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    /* Same clean header style as firstdetails.html */
-    background: transparent;
-    border: none;
-    border-bottom: none;
-    box-shadow: none;
-
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-
-    position: relative;
-    top: auto;
-
-    z-index: 100;
-}
-
-.logo {
-    color: var(--text-primary);
-    text-decoration: none;
-
-    font-size: 15px;
-    font-weight: 600;
-
-    letter-spacing: 0.13em;
-
-    white-space: nowrap;
-}
-
-.topbar nav {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-}
-
-.topbar nav a {
-    color: var(--text-secondary);
-
-    text-decoration: none;
-
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-
-    transition: color var(--theme-transition);
-}
-
-.topbar nav a:hover,
-.topbar nav a.active {
-    color: var(--text-primary);
-}
-
-.topbar nav button {
-    background: transparent;
-
-    border: none;
-
-    color: var(--text-secondary);
-
-    font-size: 14px;
-
-    padding: 0;
-
-    transition: color var(--theme-transition);
-}
-
-.topbar nav button:hover {
-    color: var(--text-primary);
 }
 
 /* GENERAL LAYOUT */
@@ -196,9 +107,7 @@ a {
 
     font-size: 12px;
 
-    font-weight: 500;
 
-    letter-spacing: 0.04em;
 
     margin-bottom: 10px;
 }
@@ -207,21 +116,14 @@ a {
 .page-heading h1 {
     color: var(--text-primary);
 
-    font-size: clamp(2rem, 4vw, 2.5rem);
-    line-height: 1.12;
-    font-weight: 600;
-    letter-spacing: -0.03em;
 }
 
 .subtitle {
     color: var(--text-secondary);
 
-    font-size: 16px;
-    line-height: 1.6;
 
     margin-top: 12px;
 
-    max-width: 650px;
 }
 /* activity.css */
 /* TODAY PAGE */
@@ -341,7 +243,6 @@ a {
 }
 
 .workout-details {
-    color: var(--text-secondary);
 
     font-size: 13px;
 }
@@ -496,7 +397,6 @@ textarea {
 
     font-size: 19px;
 
-    font-weight: 600;
 
     padding-bottom: 11px;
 
@@ -567,7 +467,6 @@ textarea {
 .competition-result {
     display: flex;
     align-items: center;
-    gap: 14px;
     padding: 13px;
     
     
@@ -1040,7 +939,6 @@ textarea {
 
 .auth-content h1 {
     font-size: clamp(2.25rem, 5vw, 3rem);
-    font-weight: 600;
     line-height: 1.06;
     letter-spacing: -0.04em;
     margin-bottom: 10px;
@@ -1147,7 +1045,6 @@ textarea {
     padding: 8px 12px;
     border: 0;
     border-radius: 8px;
-    background: transparent;
     color: var(--text-secondary);
     font-size: 14px;
     font-weight: 500;
@@ -1360,14 +1257,7 @@ small,
     letter-spacing: -0.015em;
 }
 
-.competition-search h2,
-.competition-section h2,
-.social-section h2,
-.profile-socials h3,
-.public-workout-history h2 {
-    font-weight: 600;
-    letter-spacing: -0.02em;
-}
+
 
 .topbar nav a:hover,
 .topbar nav a.active {
@@ -1479,12 +1369,7 @@ small,
 /* typography.css */
 /* INTER TYPOGRAPHY SYSTEM */
 
-body {
-    font-family: var(--font-body);
-    font-size: 16px;
-    font-weight: 400;
-    line-height: 1.6;
-}
+
 
 h1,
 .hero h1,
@@ -1581,21 +1466,14 @@ p,
 .social-links a,
 .google-button {
     color: var(--text-primary);
-    background: var(--glass-subtle);
     border-color: var(--glass-border);
 }
 
 .topbar {
     border-color: var(--glass-border);
-    background: var(--topbar-bg);
 }
 
-.topbar nav a:hover,
-.topbar nav a.active,
-.topbar nav button:hover {
-    color: var(--text-primary);
-    text-shadow: none;
-}
+
 
 .hero h1,
 .page-heading h1 {
@@ -1662,24 +1540,15 @@ p,
 }
 
 .main-button {
-    color: var(--text-on-accent);
-    background: var(--accent);
-    border-color: var(--accent);
     font-size: 15px;
     font-weight: 600;
 }
 
-.main-button:hover {
-    background: var(--accent-hover);
-    border-color: var(--accent-hover);
-}
+
 
 .secondary-button,
 .google-button,
 .social-links a {
-    color: var(--text-primary);
-    background: var(--glass-panel);
-    border-color: var(--glass-border);
     font-size: 15px;
     font-weight: 500;
 }
@@ -1688,7 +1557,6 @@ p,
 .google-button:hover,
 .social-links a:hover {
     color: var(--text-primary);
-    background: var(--glass-subtle);
 }
 
 .form-group label {
@@ -1700,7 +1568,6 @@ input,
 select,
     textarea {
     color: var(--text-primary);
-    background: var(--glass-control);
     border-color: var(--glass-border);
     font-size: 15px;
 }
@@ -1720,7 +1587,6 @@ input:focus,
 select:focus,
 textarea:focus {
     border-color: var(--focus-ring);
-    background: var(--glass-panel);
     box-shadow: 0 0 0 4px var(--glass-border);
 }
 
@@ -1737,7 +1603,6 @@ textarea:focus {
 
 .history-date {
     font-size: 21px;
-    font-weight: 600;
     line-height: 1.25;
 }
 
@@ -1794,9 +1659,7 @@ small,
     font-size: 14px;
 }
 
-.error-message {
-    color: var(--danger);
-}
+
 
 .competition-avatar.placeholder {
     color: var(--text-on-accent);
@@ -1831,9 +1694,7 @@ textarea:focus-visible {
 /* canvas-motion.css */
 /* MINIMAL CANVAS & QUIET MOTION */
 
-body {
-    background: var(--page-bg);
-}
+
 
 .topbar {
     background: var(--topbar-bg);
@@ -1939,7 +1800,6 @@ textarea {
     flex: 0 0 auto;
     place-items: center;
     color: var(--text-primary);
-    background: var(--glass-panel);
     border: 1px solid var(--glass-border);
     cursor: pointer;
 }
@@ -2028,10 +1888,7 @@ textarea {
     min-width: 0;
     height: 46px;
     padding: 0 12px;
-    border: 0;
     outline: 0;
-    background: transparent;
-    box-shadow: none;
 }
 
 .search-overlay input:focus-visible {
@@ -2068,11 +1925,6 @@ textarea {
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     clip-path: inset(50%);
-}
-
-.competition-results {
-    width: min(440px, 100%);
-    margin-top: 12px;
 }
 
 .competition-results:empty {
@@ -2325,16 +2177,9 @@ textarea:focus {
     border-color: var(--glass-border);
 }
 
-.main-button {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--text-on-accent);
-}
 
-.main-button:hover {
-    background: var(--accent-hover);
-    border-color: var(--accent-hover);
-}
+
+
 
 .secondary-button,
 .google-button,
@@ -2384,7 +2229,6 @@ textarea:focus {
 
 #firstSetupPage {
     min-height: 100vh;
-    background: var(--page-bg);
 }
 
 #firstSetupPage .setup-shell {
@@ -3042,7 +2886,6 @@ textarea:focus {
 
 .search-control {
     width: min(100%, 620px);
-    gap: 14px;
 }
 
 .search-overlay,
@@ -3051,34 +2894,23 @@ textarea:focus {
     width: auto;
     max-width: 560px;
     min-width: 0;
-    height: 44px;
     margin-left: 0;
     overflow: visible;
     visibility: visible;
     opacity: 1;
     transform: none;
-    border: 0;
-    border-bottom: 1px solid var(--glass-border);
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
     transition: none;
 }
 
 .search-overlay input,
 .search-overlay input:focus {
-    height: 42px;
-    padding: 0 2px;
     border: 0;
     background: transparent;
     box-shadow: none;
     transition: none;
 }
 
-.search-overlay:focus-within {
-    border-bottom-color: var(--text-secondary);
-    box-shadow: none;
-}
+
 
 .search-trigger {
     transition: none;
@@ -3136,7 +2968,7 @@ textarea:focus {
     padding: 14px 0;
     background: transparent;
     border: 0;
-    border-bottom: 1px solid var(--glass-border);
+    border-bottom: none;
     border-radius: 0;
     box-shadow: none;
     backdrop-filter: none;
@@ -3265,9 +3097,6 @@ textarea:focus {
 .competition-results {
     width: min(560px, 100%);
     margin-top: 14px;
-}
-
-.competition-results {
     gap: 0;
 }
 
@@ -3276,7 +3105,7 @@ textarea:focus {
     padding: 15px 0;
     background: transparent;
     border: 0;
-    border-bottom: 1px solid var(--glass-border);
+    border-bottom: none;
     border-radius: 0;
     box-shadow: none;
     backdrop-filter: none;
@@ -3290,7 +3119,7 @@ textarea:focus {
 
 .competition-card {
     padding: 22px 0;
-    border-bottom: 1px solid var(--glass-border);
+    border-bottom: none;
 }
 
 .competition-card-header p,
@@ -3665,93 +3494,7 @@ body {
 .topbar {
     width: min(calc(100% - 40px), 1160px);
     min-height: 42px;
-    margin: 0 auto;
     padding: 26px 0 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    /* Minimal navigation with a red-tinted dark background */
-    background: transparent !important;
-    border: none !important;
-    border-bottom: none !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-
-    position: relative;
-    top: auto;
-    z-index: 100;
-}
-
-.logo {
-    color: var(--text-primary);
-    text-decoration: none;
-    font-size: 15px;
-    font-weight: 750;
-    letter-spacing: 0.13em;
-    white-space: nowrap;
-}
-
-.topbar nav {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-}
-
-.topbar nav a,
-.topbar nav button {
-    color: var(--text-secondary);
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-    padding: 0;
-    transition: color var(--theme-transition);
-}
-
-.topbar nav a:hover,
-.topbar nav a.active,
-.topbar nav button:hover {
-    color: var(--text-primary);
-    text-shadow: none;
-}
-
-@media (max-width: 520px) {
-    .topbar {
-        width: min(calc(100% - 28px), 620px);
-        min-height: 42px;
-        padding: 17px 0 0;
-    }
-
-    .topbar nav {
-        gap: 14px;
-    }
-
-    .topbar nav a,
-    .topbar nav button {
-        font-size: 12px;
-    }
-}
-
-/* GLOBAL NAVIGATION */
-
-body {
-    background: var(--page-bg);
-}
-
-.topbar {
-    width: min(calc(100% - 40px), 1160px);
-    min-height: 42px;
-    margin: 0 auto;
-    padding: 26px 0 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     background: transparent !important;
     border: none !important;
     border-bottom: none !important;
@@ -3873,11 +3616,6 @@ body {
     display: flex;
     flex-direction: column;
     padding: 20px 0;
-    border: 0;
-    border-bottom: 1px solid var(--glass-border);
-    background: transparent;
-    border-radius: 0;
-    box-shadow: none;
 }
 .exercise-card-topline {
     display: flex;
@@ -3993,8 +3731,6 @@ body {
 .exercise-library-page .exercise-library { order: 2; }
 
 .topbar-start {
-    display: flex;
-    align-items: center;
     gap: 13px;
 }
 
@@ -4104,7 +3840,7 @@ body.app-page .exercise-library-page .exercise-card h3 {
 .exercise-card .exercise-muscles { gap: 5px; margin-bottom: 13px; }
 .exercise-card .exercise-tag { padding: 3px 7px; border-radius: 999px; color: var(--text-secondary); background: var(--glass-subtle); font-size: 10px; line-height: 1.3; }
 .exercise-card .exercise-details { padding-top: 10px; }
-.exercise-card .exercise-details summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
+.exercise-card .exercise-details summary { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
 .exercise-card .exercise-details summary::after { content: "+"; color: var(--text-secondary); font-size: 18px; font-weight: 400; line-height: 1; }
 .exercise-card .exercise-details[open] summary::after { content: "−"; }
 
@@ -4735,8 +4471,6 @@ nav button,
     background: var(--accent);
     box-shadow: var(--shadow-soft);
     font-size: 13px;
-    font-weight: 500;
-    text-decoration: none;
 }
 
 .mobile-nav-panel {
@@ -5447,7 +5181,6 @@ body.mobile-nav-open {
 
 :root[data-theme="dark"] .competition-avatar.placeholder {
     background: #303030;
-    color: var(--text-primary);
 }
 
 :root[data-theme="dark"] .exercise-details {
