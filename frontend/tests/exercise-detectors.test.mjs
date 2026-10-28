@@ -102,6 +102,16 @@ function plankPose(hipY = 0.5) {
     });
 }
 
+function frontFacingPlankPose() {
+    const landmarks = pose();
+    return setPoints(landmarks, {
+        11: { x: 0.4, y: 0.2 }, 13: { x: 0.44, y: 0.32 }, 15: { x: 0.48, y: 0.44 },
+        23: { x: 0.45, y: 0.52 }, 27: { x: 0.48, y: 0.88 },
+        12: { x: 0.6, y: 0.2 }, 14: { x: 0.56, y: 0.32 }, 16: { x: 0.52, y: 0.44 },
+        24: { x: 0.55, y: 0.52 }, 28: { x: 0.52, y: 0.88 }
+    });
+}
+
 function armExercisePose(slug, angle) {
     const landmarks = pose();
     for (const side of [
@@ -249,6 +259,21 @@ test("push-up detector counts a full cycle when facing the camera", () => {
     assert.equal(detector.count, 1);
 });
 
+test("push-up detector counts front-facing shallow reps with hips and feet out of frame", () => {
+    const detector = new PushUpDetector();
+    let time = 0;
+    for (const angle of [155, 125, 155, 155]) {
+        const landmarks = frontFacingPushUpPose(angle);
+        for (const index of [23, 24, 27, 28]) {
+            landmarks[index].visibility = 0.1;
+        }
+        feed(detector, landmarks, time, 6);
+        time += 600;
+    }
+
+    assert.equal(detector.count, 1);
+});
+
 test("push-up detector pauses when the body landmarks are unreliable", () => {
     const detector = new PushUpDetector();
     feed(detector, pushUpPose(180), 0);
@@ -313,6 +338,15 @@ test("plank timer rejects front-on poses and unreliable arm support", () => {
     assert.equal(detector.elapsedMs, 0);
 });
 
+test("plank timer works when the user faces the camera head-on", () => {
+    const detector = new PlankTimerDetector();
+    const frontalPose = frontFacingPlankPose();
+
+    assert.equal(detector.update(frontalPose, 0).isCorrect, true);
+    assert.equal(detector.update(frontalPose, 110).isCorrect, true);
+    assert.equal(detector.elapsedMs, 110);
+});
+
 test("exercise-specific arm detectors count a full range cycle for each movement", () => {
     const cases = [
         ["pull-ups", [170, 135, 75, 115, 170]],
@@ -348,6 +382,46 @@ test("arm detectors count movements that pass over the active angle band", () =>
             time += 700;
         }
         assert.equal(detector.count, 1, `${slug} should count a fast full movement`);
+    }
+});
+
+test("arm detectors count a smaller-range movement with moderately visible landmarks", () => {
+    const detector = new ExerciseArmDetector("biceps-curls");
+    const sequence = [150, 130, 90, 130, 150, 150];
+    let time = 0;
+    for (const angle of sequence) {
+        const landmarks = armExercisePose("biceps-curls", angle);
+        for (const index of [11, 13, 15, 23, 12, 14, 16, 24]) {
+            landmarks[index].visibility = 0.5;
+        }
+        feed(detector, landmarks, time, 7);
+        time += 700;
+    }
+
+    assert.equal(detector.count, 1);
+});
+
+test("curls, triceps extensions, and shoulder presses use forgiving hand-and-arm tracking", () => {
+    const cases = [
+        ["biceps-curls", [140, 120, 95, 120, 140, 140]],
+        ["triceps-extension", [75, 110, 155, 125, 75, 75]],
+        ["shoulder-press", [100, 125, 155, 115, 100, 100]]
+    ];
+
+    for (const [slug, sequence] of cases) {
+        const detector = new ExerciseArmDetector(slug);
+        let time = 0;
+        for (const angle of sequence) {
+            const landmarks = armExercisePose(slug, angle);
+            for (const index of [11, 12, 13, 14, 15, 16]) {
+                landmarks[index].visibility = 0.4;
+            }
+            for (const index of [23, 24]) landmarks[index].visibility = 0.1;
+            feed(detector, landmarks, time, 6);
+            time += 600;
+        }
+
+        assert.equal(detector.count, 1, `${slug} should count with wrist/arm visibility only`);
     }
 });
 
@@ -391,17 +465,32 @@ test("jumping jack detector remains reliable when the person appears smaller in 
     assert.equal(detector.count, 1);
 });
 
-test("jumping jack detector rejects a narrow stance as the open position", () => {
+test("jumping jack detector rejects a movement that never opens the arms or stance", () => {
     const detector = new JumpingJackDetector();
     feed(detector, jumpingJackPose(false), 0, 6);
 
     const narrowOpen = jumpingJackPose(true);
     narrowOpen[27].x = 0.465;
     narrowOpen[28].x = 0.535;
+    narrowOpen[15].y = 0.55;
+    narrowOpen[16].y = 0.55;
     feed(detector, narrowOpen, 600, 6);
     feed(detector, jumpingJackPose(false), 1200, 6);
 
     assert.equal(detector.count, 0);
+});
+
+test("jumping jack detector counts a completed partial-range movement", () => {
+    const detector = new JumpingJackDetector();
+    const armsOnly = jumpingJackPose(true);
+    armsOnly[27].x = 0.465;
+    armsOnly[28].x = 0.535;
+
+    feed(detector, jumpingJackPose(false), 0, 6);
+    feed(detector, armsOnly, 600, 6);
+    feed(detector, jumpingJackPose(false), 1200, 6);
+
+    assert.equal(detector.count, 1);
 });
 
 test("skipping rope detector requires a visible jump and landing cycle", () => {
@@ -421,6 +510,19 @@ test("skipping rope detector detects jumps when the person appears smaller in fr
         feed(detector, scalePose(skippingRopePose(jumping), 0.3), time, 6);
         time += 600;
     }
+    assert.equal(detector.count, 1);
+});
+
+test("skipping rope detector counts a small hop and landing", () => {
+    const detector = new SkippingRopeDetector();
+    const smallHop = skippingRopePose(false);
+    smallHop[23].y -= 0.01;
+    smallHop[24].y -= 0.01;
+
+    feed(detector, skippingRopePose(false), 0, 6);
+    feed(detector, smallHop, 600, 6);
+    feed(detector, skippingRopePose(false), 1200, 6);
+
     assert.equal(detector.count, 1);
 });
 
