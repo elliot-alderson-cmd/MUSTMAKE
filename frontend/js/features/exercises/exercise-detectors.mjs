@@ -1,4 +1,4 @@
-const VISIBILITY_THRESHOLD = 0.55;
+const VISIBILITY_THRESHOLD = 0.4;
 const SMOOTHING_ALPHA = 0.5;
 const MIN_SEGMENT_LENGTH = 0.015;
 
@@ -20,80 +20,78 @@ export const SQUAT_THRESHOLDS = Object.freeze({
 
 export const PUSH_UP_THRESHOLDS = Object.freeze({
     visibility: VISIBILITY_THRESHOLD,
-    starting: 155,
-    lowering: 140,
-    bottom: 105,
-    returning: 125,
-    settleMs: 110,
-    establishMs: 250,
-    returnMs: 150,
-    maxBodyLineAngle: 38,
-    minFrontViewBodyLineAngle: 52
+    starting: 140,
+    lowering: 135,
+    bottom: 130,
+    returning: 135,
+    settleMs: 60,
+    establishMs: 120,
+    returnMs: 70
 });
 
 export const PLANK_THRESHOLDS = Object.freeze({
-    visibility: 0.6,
-    maxBodyLineAngle: 20,
-    maxHipDeviation: 0.12,
-    minBodyLength: 0.25,
-    minSupportArmAngle: 65,
+    visibility: 0.45,
+    maxBodyLineAngle: 90,
+    maxHipDeviation: 0.18,
+    minBodyLength: 0.2,
+    minSupportArmAngle: 55,
     maxFrameGapMs: 180
 });
 
 export const EXERCISE_THRESHOLDS = Object.freeze({
     "pull-ups": {
         visibility: VISIBILITY_THRESHOLD,
-        start: 155,
-        active: 115,
-        bottom: 80,
-        return: 125,
-        settleMs: 110,
-        establishMs: 250,
-        returnMs: 150,
+        start: 145,
+        active: 135,
+        bottom: 100,
+        return: 135,
+        settleMs: 70,
+        establishMs: 160,
+        returnMs: 90,
         name: "pull-up"
     },
     "biceps-curls": {
-        visibility: VISIBILITY_THRESHOLD,
-        start: 155,
+        visibility: 0.35,
+        start: 135,
         active: 125,
-        bottom: 65,
-        return: 105,
-        settleMs: 110,
-        establishMs: 250,
-        returnMs: 150,
+        bottom: 105,
+        return: 120,
+        settleMs: 50,
+        establishMs: 100,
+        returnMs: 60,
         name: "biceps curl"
     },
     "triceps-extension": {
-        visibility: VISIBILITY_THRESHOLD,
-        start: 70,
-        active: 105,
-        bottom: 155,
-        return: 120,
-        settleMs: 110,
-        establishMs: 250,
-        returnMs: 150,
+        visibility: 0.35,
+        start: 80,
+        active: 95,
+        bottom: 135,
+        return: 115,
+        settleMs: 50,
+        establishMs: 100,
+        returnMs: 60,
         name: "triceps extension"
     },
     "shoulder-press": {
-        visibility: VISIBILITY_THRESHOLD,
-        start: 100,
-        active: 125,
-        bottom: 160,
-        return: 135,
-        settleMs: 110,
-        establishMs: 250,
-        returnMs: 150,
+        visibility: 0.35,
+        start: 105,
+        active: 115,
+        bottom: 140,
+        return: 120,
+        settleMs: 50,
+        establishMs: 100,
+        returnMs: 60,
         name: "shoulder press"
     },
     "lateral-raises": {
         visibility: VISIBILITY_THRESHOLD,
-        start: 20,
-        active: 55,
-        bottom: 100,
-        return: 70,
-        settleMs: 110,
-        establishMs: 250,
-        returnMs: 150,
+        start: 35,
+        active: 50,
+        bottom: 80,
+        return: 55,
+        settleMs: 70,
+        establishMs: 160,
+        returnMs: 90,
         name: "lateral raise"
     }
 });
@@ -272,7 +270,7 @@ export class SquatDetector extends RepDetector {
 
 export class PushUpDetector extends RepDetector {
     constructor(thresholds = PUSH_UP_THRESHOLDS) {
-        super(thresholds, "Face the camera or turn side-on, then hold a straight starting position in view.");
+        super(thresholds, "Keep at least one shoulder, elbow, and wrist visible. Start with your arms extended.");
     }
 
     update(landmarks, now = performance.now()) {
@@ -281,22 +279,12 @@ export class PushUpDetector extends RepDetector {
             const shoulder = landmarks?.[side.shoulder];
             const elbow = landmarks?.[side.elbow];
             const wrist = landmarks?.[side.wrist];
-            const hip = landmarks?.[side.hip];
-            const ankle = landmarks?.[side.ankle];
-            if (![shoulder, elbow, wrist, hip, ankle].every(point =>
+            if (![shoulder, elbow, wrist].every(point =>
                 visible(point, this.thresholds.visibility)
             )) continue;
 
             const armAngle = angleAt(shoulder, elbow, wrist);
-            const torsoLength = Math.hypot(shoulder.x - hip.x, shoulder.y - hip.y);
-            if (armAngle == null || torsoLength < 0.04) continue;
-            const bodyLineAngle = Math.atan2(
-                Math.abs(shoulder.y - ankle.y),
-                Math.abs(shoulder.x - ankle.x)
-            ) * 180 / Math.PI;
-            const sideView = bodyLineAngle <= this.thresholds.maxBodyLineAngle;
-            const frontView = bodyLineAngle >= this.thresholds.minFrontViewBodyLineAngle;
-            if (!sideView && !frontView) continue;
+            if (armAngle == null) continue;
             candidates.push(armAngle);
         }
         if (!candidates.length) {
@@ -466,19 +454,19 @@ class AngleCycleDetector extends RepDetector {
 
 function armCycleAngles(landmarks, thresholds) {
     const values = [];
+    const needsHip = thresholds.name === "pull-up";
     for (const [name, side] of Object.entries(LANDMARKS)) {
         const shoulder = landmarks?.[side.shoulder];
         const elbow = landmarks?.[side.elbow];
         const wrist = landmarks?.[side.wrist];
         const hip = landmarks?.[side.hip];
-        if (![shoulder, elbow, wrist, hip].every(point =>
+        if (![shoulder, elbow, wrist].every(point =>
             visible(point, thresholds.visibility)
-        )) continue;
+        ) || (needsHip && !visible(hip, thresholds.visibility))) continue;
         const angle = angleAt(shoulder, elbow, wrist);
         if (angle == null) continue;
         const upperArmLength = Math.hypot(shoulder.x - elbow.x, shoulder.y - elbow.y);
-        const torsoLength = Math.hypot(shoulder.x - hip.x, shoulder.y - hip.y);
-        if (upperArmLength < 0.025 || torsoLength < 0.06) continue;
+        if (upperArmLength < 0.025) continue;
         values.push({ side: name, angle });
     }
 
@@ -613,13 +601,13 @@ export class ExerciseArmDetector extends AngleCycleDetector {
 
 export const JUMPING_JACK_THRESHOLDS = Object.freeze({
     visibility: VISIBILITY_THRESHOLD,
-    armsDownMax: 0.35,
-    armsUpMin: 0.75,
-    feetClosedMax: 0.55,
-    feetOpenMin: 1.15,
-    settleMs: 100,
-    establishMs: 250,
-    returnMs: 130,
+    armsDownMax: 0.45,
+    armsUpMin: 0.65,
+    feetClosedMax: 0.75,
+    feetOpenMin: 0.95,
+    settleMs: 70,
+    establishMs: 160,
+    returnMs: 90,
     maxFrameGapMs: 350
 });
 
@@ -637,7 +625,7 @@ export class JumpingJackDetector extends RepDetector {
         }
         const shoulderWidth = Math.abs(landmarks[11].x - landmarks[12].x);
         const hipWidth = Math.abs(landmarks[23].x - landmarks[24].x);
-        if (shoulderWidth < 0.045 || hipWidth < 0.025) {
+        if (shoulderWidth < 0.025 || hipWidth < 0.015) {
             this.loseTracking();
             return this.result(null);
         }
@@ -651,8 +639,8 @@ export class JumpingJackDetector extends RepDetector {
         const armsDown = armHeight <= t.armsDownMax;
         const feetOpen = legWidth >= t.feetOpenMin;
         const feetClosed = legWidth <= t.feetClosedMax;
-        const jumping = armsUp && feetOpen;
-        const closed = armsDown && feetClosed;
+        const jumping = armsUp || feetOpen;
+        const closed = armsDown || feetClosed;
 
         if (this.state === "unknown") {
             this.feedback = "Stand with arms down and feet together to establish the starting position.";
@@ -686,11 +674,11 @@ export class JumpingJackDetector extends RepDetector {
 
 export const SKIPPING_ROPE_THRESHOLDS = Object.freeze({
     visibility: VISIBILITY_THRESHOLD,
-    minFootClearance: 0.1,
-    landingTolerance: 0.04,
-    settleMs: 60,
-    establishMs: 250,
-    returnMs: 90,
+    minFootClearance: 0.045,
+    landingTolerance: 0.07,
+    settleMs: 50,
+    establishMs: 160,
+    returnMs: 70,
     maxFrameGapMs: 300
 });
 
@@ -725,8 +713,8 @@ export class SkippingRopeDetector extends RepDetector {
             Math.hypot(landmarks[12].x - landmarks[24].x, landmarks[12].y - landmarks[24].y)
         ) / 2;
         if (leftLeg == null || rightLeg == null ||
-            Math.abs(leftLeg - rightLeg) > 65 ||
-            Math.abs(landmarks[27].x - landmarks[28].x) > 0.3 ||
+            Math.abs(leftLeg - rightLeg) > 90 ||
+            Math.abs(landmarks[27].x - landmarks[28].x) > 0.45 ||
             torsoLength < MIN_SEGMENT_LENGTH) {
             this.loseTracking();
             return this.result(null);
@@ -783,7 +771,7 @@ export class PlankTimerDetector {
         this.elapsedMs = Math.max(0, Number(elapsedMs) || 0);
         this.lastValidAt = null;
         this.isCorrect = false;
-        this.feedback = "Turn side-on and get into a straight plank position.";
+        this.feedback = "Turn side-on or face the camera and get into a straight plank position.";
     }
 
     pause() {
@@ -846,7 +834,7 @@ export class PlankTimerDetector {
 
         this.pause();
         this.feedback = !hasVisibleBody
-            ? "Body landmarks are not reliably visible. Turn side-on and fit your full body in frame."
+            ? "Body landmarks are not reliably visible. Face the camera or turn side-on and fit your body in frame."
             : !hasVisibleSupport
                 ? "Keep an arm and hand visible so the plank position can be tracked."
                 : !hasStableSupport
