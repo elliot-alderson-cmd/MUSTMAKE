@@ -33,7 +33,7 @@
             font-size: clamp(2.5rem, 5vw, 3.5rem);
             font-weight: 700;
             margin-bottom: 20px;
-            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+            background: linear-gradient(135deg, #0284c7 0%, #ffffff 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -138,6 +138,14 @@
             position: relative;
         }
 
+        .blog-page #exercises > .section-title .just-highlight {
+            color: #ff0000;
+        }
+
+        :root[data-theme="dark"] .blog-page .blog-hero h1 {
+            background-image: linear-gradient(135deg, #38bdf8 0%, #ffffff 100%);
+        }
+
         .section-title::after {
             content: '';
             display: block;
@@ -220,7 +228,7 @@
         </section>
 
         <section id="exercises" class="blog-section">
-            <h2 class="section-title">it's just you</h2>
+            <h2 class="section-title">it's just <span class="just-highlight">you</span></h2>
             <section class="exercise-library" aria-label="Exercise library">
                 <div id="exerciseGrid" class="exercise-library-groups" aria-live="polite"></div>
             </section>
