@@ -95,6 +95,30 @@
         ]
     },
     {
+        "slug": "cycling",
+        "name": "Cycling",
+        "group": "bodyweight",
+        "media": { "src": "/assets/images/cycling.jpeg", "type": "image" },
+        "modes": ["manual"],
+        "manualType": "distance-duration",
+        "fields": [
+            { "name": "amount", "label": "Distance (km)", "min": 0.01, "step": 0.01 },
+            { "name": "durationMinutes", "label": "Duration (minutes)", "min": 0.1, "step": 0.1 }
+        ]
+    },
+    {
+        "slug": "swimming",
+        "name": "Swimming",
+        "group": "bodyweight",
+        "media": { "src": "/assets/images/swim.jpeg", "type": "image" },
+        "modes": ["manual"],
+        "manualType": "distance-duration",
+        "fields": [
+            { "name": "amount", "label": "Distance (km)", "min": 0.01, "step": 0.01 },
+            { "name": "durationMinutes", "label": "Duration (minutes)", "min": 0.1, "step": 0.1 }
+        ]
+    },
+    {
         "slug": "biceps-curls",
         "name": "Biceps Curls",
         "group": "dumbbells",

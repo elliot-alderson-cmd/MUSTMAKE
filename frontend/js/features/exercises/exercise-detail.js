@@ -1,7 +1,8 @@
 (() => {
     "use strict";
 
-    const EXERCISE_CACHE_KEY = "mustmake_exercises_v2";
+    const EXERCISE_CACHE_KEY = "mustmake_exercises_v3";
+    const PREVIOUS_EXERCISE_CACHE_KEY = "mustmake_exercises_v2";
     const LEGACY_EXERCISE_CACHE_KEY = "mustmake_exercises";
     const PENDING_WORKOUT_KEY = "mustmake_pending_workout";
     const root = document.getElementById("exerciseDetail");
@@ -60,6 +61,7 @@
     function cacheExercises(exercises) {
         try {
             sessionStorage.setItem(EXERCISE_CACHE_KEY, JSON.stringify(exercises));
+            sessionStorage.removeItem(PREVIOUS_EXERCISE_CACHE_KEY);
             sessionStorage.removeItem(LEGACY_EXERCISE_CACHE_KEY);
         } catch (error) {
             console.warn("Could not cache the exercise catalog.", error);
