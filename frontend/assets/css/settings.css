@@ -17,7 +17,6 @@
     justify-content: space-between;
     gap: 1.5rem;
     padding: 0 0 1rem;
-    border-bottom: 1px solid var(--glass-border);
 }
 
 .settings-row h2 {
@@ -81,6 +80,63 @@
 .settings-status {
     min-height: 1.2em;
     margin-top: 0.65rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.settings-danger-zone {
+    margin-top: 3rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--glass-border);
+    text-align: center;
+}
+
+.settings-danger-zone h2 {
+    margin: 0 0 1rem;
+    color: #ff6b6b;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: underline;
+    text-decoration-color: #ff0000;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.35rem;
+}
+
+.settings-delete-button {
+    display: inline-block;
+    padding: 0;
+    border: 0;
+    color: #ff0000;
+    background: transparent;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+:root[data-theme="dark"] body .settings-delete-button {
+    color: #ff0000;
+}
+
+.settings-delete-button:hover {
+    text-decoration: underline;
+}
+
+.settings-delete-button:focus-visible {
+    outline: 2px solid #ff0000;
+    outline-offset: 4px;
+}
+
+.settings-delete-button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.settings-delete-status {
+    min-height: 1.2em;
+    margin-top: 0.5rem;
     color: var(--text-muted);
     font-size: 0.75rem;
 }

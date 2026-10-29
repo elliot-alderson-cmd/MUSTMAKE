@@ -195,12 +195,6 @@
                 ${navLink("/pages/about-us.html", "About", currentPage)}
                 <a href="mailto:tejas49167@gmail.com?subject=Bug%20Report" target="_blank" rel="noopener noreferrer">Report Bug</a>
                 <a href="mailto:tejas49167@gmail.com?subject=Suggestion" target="_blank" rel="noopener noreferrer">Suggestions</a>
-                <button class="mobile-nav-delete-account"
-                    type="button"
-                    data-auth-delete-account>
-                    Delete account
-                </button>
-                <p class="mobile-nav-account-message" role="status" aria-live="polite"></p>
 
                 <button class="mobile-nav-logout"
                     type="button"
@@ -538,50 +532,6 @@
             });
         });
 
-        const deleteAccountButton = container.querySelector("[data-auth-delete-account]");
-        const deleteAccountMessage = container.querySelector(".mobile-nav-account-message");
-        deleteAccountButton?.addEventListener("click", async () => {
-            const confirmed = window.confirm(
-                "Delete your account permanently? This will also delete your profile, workouts, and competition links. This action cannot be undone."
-            );
-            if (!confirmed) return;
-
-            deleteAccountButton.disabled = true;
-            deleteAccountMessage.textContent = "Deleting your account...";
-
-            try {
-                const response = await fetch(`${window.API_URL}/api/account`, {
-                    method: "DELETE",
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`
-                    }
-                });
-                const data = await response.json().catch(() => ({}));
-
-                if (response.status === 401) {
-                    window.clearPrivateCaches();
-                    localStorage.removeItem("token");
-                    localStorage.removeItem("user");
-                    window.location.href = "/blog";
-                    return;
-                }
-                if (!response.ok) {
-                    throw new Error(data.message || "Could not delete your account.");
-                }
-
-                window.clearPrivateCaches();
-                localStorage.removeItem("token");
-                localStorage.removeItem("user");
-                deleteAccountMessage.textContent = "Account deleted. Redirecting...";
-                window.setTimeout(() => window.location.replace("/blog"), 600);
-            } catch (error) {
-                console.error("Account deletion error:", error);
-                deleteAccountMessage.textContent = error instanceof TypeError
-                    ? "Could not reach the server. Please try again."
-                    : error.message || "Could not delete your account.";
-                deleteAccountButton.disabled = false;
-            }
-        });
     }
 
     if (document.readyState === "loading") {

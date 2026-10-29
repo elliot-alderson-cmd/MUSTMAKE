@@ -4674,8 +4674,7 @@ nav button,
 }
 
 .mobile-nav-links > a,
-.mobile-nav-links > .mobile-nav-logout,
-.mobile-nav-links > .mobile-nav-delete-account {
+.mobile-nav-links > .mobile-nav-logout {
     display: flex;
     width: 100%;
     min-height: 50px;
@@ -4697,25 +4696,9 @@ nav button,
 
 .mobile-nav-links > a:hover,
 .mobile-nav-links > .mobile-nav-logout:hover,
-.mobile-nav-links > .mobile-nav-delete-account:hover,
 .mobile-nav-links > a.active {
     color: var(--accent-hover);
     background: var(--accent-soft);
-}
-
-.mobile-nav-links > .mobile-nav-delete-account {
-    color: #b42318;
-}
-
-.mobile-nav-links > .mobile-nav-delete-account:disabled {
-    cursor: wait;
-    opacity: 0.65;
-}
-
-.mobile-nav-account-message {
-    margin: 0 11px;
-    color: var(--text-secondary);
-    font-size: 12px;
 }
 
 .mobile-nav-open { overflow: hidden; }
@@ -5247,8 +5230,7 @@ body.mobile-nav-open {
 }
 
 :root[data-theme="dark"] .mobile-nav-links > a:hover,
-:root[data-theme="dark"] .mobile-nav-links > .mobile-nav-logout:hover,
-:root[data-theme="dark"] .mobile-nav-links > .mobile-nav-delete-account:hover {
+:root[data-theme="dark"] .mobile-nav-links > .mobile-nav-logout:hover {
     color: var(--accent-hover);
     background: var(--accent-soft);
 }

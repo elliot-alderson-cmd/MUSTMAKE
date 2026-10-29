@@ -134,8 +134,7 @@
 }
 
 :root[data-theme="dark"] .mobile-nav-links > a:hover,
-:root[data-theme="dark"] .mobile-nav-links > .mobile-nav-logout:hover,
-:root[data-theme="dark"] .mobile-nav-links > .mobile-nav-delete-account:hover {
+:root[data-theme="dark"] .mobile-nav-links > .mobile-nav-logout:hover {
     color: var(--accent-hover);
     background: var(--accent-soft);
 }
