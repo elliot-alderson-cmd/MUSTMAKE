@@ -67,6 +67,7 @@ if (fs.existsSync(frontendRoot)) {
         "/login": "login.html",
         "/signup": "signup.html",
         "/profile": "profile.html",
+        "/settings": "settings.html",
         "/edit-profile": "edit-profile.html",
         "/user-profile": "user-profile.html",
         "/competition": "competition.html",

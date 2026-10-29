@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#101010">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="/js/core/change_backend_url.js"></script>
+    <link rel="icon" type="image/x-icon" href="/assets/images/favicon.jpeg">
+    <title>Settings | MUSTMAKE</title>
+    <script src="/js/shared/theme.js"></script>
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="stylesheet" href="/assets/css/settings.css">
+</head>
+<body class="settings-page">
+    <div id="navbar"></div>
+
+    <main class="settings-container">
+        <h1>Settings</h1>
+
+        <section class="settings-row" aria-labelledby="cameraSettingTitle">
+            <h2 id="cameraSettingTitle">Mirror camera</h2>
+
+            <label class="settings-switch">
+                <input id="cameraMirrorToggle" type="checkbox" role="switch" aria-labelledby="cameraSettingTitle">
+                <span class="settings-switch-track" aria-hidden="true"></span>
+            </label>
+        </section>
+
+        <p id="cameraSettingStatus" class="settings-status" role="status" aria-live="polite"></p>
+    </main>
+
+    <script src="/js/shared/navbar.js"></script>
+    <script type="module" src="/js/features/exercises/settings.js"></script>
+</body>
+</html>

@@ -1,4 +1,9 @@
 import { createExerciseDetector } from "./exercise-detectors.mjs";
+import {
+    CAMERA_PREFERENCE_CHANGE_EVENT,
+    getCameraMirrorPreference,
+    getCameraMirrorPreferenceKey
+} from "./camera-preference.js";
 
 const MEDIAPIPE_VERSION = "1.1.1";
 const MEDIAPIPE_MODULE =
@@ -144,6 +149,12 @@ export function mountAiMonitor(
     const context = canvas.getContext("2d");
     const detector = createExerciseDetector(exercise.slug);
     const listeners = new AbortController();
+
+    function applyCameraMirrorPreference() {
+        preview.dataset.mirrored = String(getCameraMirrorPreference());
+    }
+
+    applyCameraMirrorPreference();
 
     let lifecycle = "idle";
     let stream = null;
@@ -1155,6 +1166,25 @@ export function mountAiMonitor(
     video.addEventListener(
         "resize",
         updatePreviewAspectRatio,
+        { signal: listeners.signal }
+    );
+
+    window.addEventListener(
+        CAMERA_PREFERENCE_CHANGE_EVENT,
+        applyCameraMirrorPreference,
+        { signal: listeners.signal }
+    );
+
+    window.addEventListener(
+        "storage",
+        event => {
+            if (
+                event.key === "user" ||
+                event.key === getCameraMirrorPreferenceKey()
+            ) {
+                applyCameraMirrorPreference();
+            }
+        },
         { signal: listeners.signal }
     );
 

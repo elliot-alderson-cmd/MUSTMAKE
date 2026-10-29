@@ -90,6 +90,11 @@
     z-index: 0;
 }
 
+.monitor-preview[data-mirrored="true"] video,
+.monitor-preview[data-mirrored="true"] canvas {
+    transform: scaleX(-1);
+}
+
 .monitor-preview video[hidden],
 .monitor-summary[hidden],
 .monitor-preview-placeholder[hidden] {

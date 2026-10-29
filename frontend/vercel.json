@@ -25,6 +25,7 @@
     { "source": "/login", "destination": "/pages/login" },
     { "source": "/signup", "destination": "/pages/signup" },
     { "source": "/profile", "destination": "/pages/profile" },
+    { "source": "/settings", "destination": "/pages/settings" },
     { "source": "/edit-profile", "destination": "/pages/edit-profile" },
     { "source": "/user-profile", "destination": "/pages/user-profile" },
     { "source": "/competition", "destination": "/pages/competition" },
