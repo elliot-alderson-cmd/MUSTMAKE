@@ -14,6 +14,44 @@ const passwordLabel = document.getElementById("passwordLabel");
 const loginSubmitButton = document.getElementById("loginSubmitButton");
 const loginModeButtons = document.querySelectorAll("[data-login-mode]");
 let loginMode = "password";
+let loginMessageTimer = null;
+
+function clearLoginMessageAnimation() {
+    if (loginMessageTimer) {
+        clearTimeout(loginMessageTimer);
+        loginMessageTimer = null;
+    }
+
+    loginMessage.classList.remove(
+        "auth-message-invalid",
+        "auth-message-email-missing",
+        "auth-message-error",
+        "auth-message-pop"
+    );
+    loginMessage.style.removeProperty("color");
+}
+
+function showAnimatedLoginMessage(message, stateClass, color) {
+    clearLoginMessageAnimation();
+    loginMessage.textContent = message;
+    loginMessage.classList.add(stateClass);
+    loginMessage.style.color = color;
+    void loginMessage.offsetWidth;
+    loginMessage.classList.add("auth-message-pop");
+
+    loginMessageTimer = window.setTimeout(() => {
+        loginMessage.textContent = "";
+        clearLoginMessageAnimation();
+    }, 2600);
+}
+
+function showInvalidCredentialsMessage() {
+    showAnimatedLoginMessage(
+        "Invalid username/email or password.",
+        "auth-message-invalid",
+        "#ff3b3b"
+    );
+}
 
 window.addEventListener("storage", (event) => {
     if (event.key !== "googleLoginComplete" || !event.newValue) {
@@ -94,6 +132,7 @@ function setLoginMode(mode) {
     loginMode = mode;
     const usingOtp = mode === "otp";
 
+    otpLoginStatus.classList.remove("auth-message-error");
     otpLoginStatus.textContent = "";
     otpLoginStatus.hidden = true;
 
@@ -116,10 +155,12 @@ function setLoginMode(mode) {
     });
 }
 
-function setOtpStatus(message) {
+function setOtpStatus(message, isError = false) {
     otpLoginStatus.textContent = message;
     otpLoginStatus.hidden = !message;
+    otpLoginStatus.classList.toggle("auth-message-error", isError);
     loginMessage.textContent = "";
+    loginMessage.classList.remove("auth-message-error");
 }
 
 function finishLogin(data) {
@@ -156,6 +197,7 @@ function updateResendCooldown() {
         resendButton.textContent = remaining > 0
             ? `Resend in ${Math.ceil(remaining / 1000)}s`
             : "Resend code";
+        resendStatus.hidden = false;
         resendStatus.textContent = "Didn’t receive the code?";
 
         if (remaining === 0 && resendTimer) {
@@ -170,7 +212,7 @@ function updateResendCooldown() {
     }
 }
 
-function resetOtpLogin(message, email = "") {
+function resetOtpLogin(message, email = "", isError = false) {
     if (resendTimer) {
         clearInterval(resendTimer);
         resendTimer = null;
@@ -180,12 +222,14 @@ function resetOtpLogin(message, email = "") {
     sessionStorage.removeItem(LOGIN_SENT_AT_KEY);
     document.getElementById("loginOtp").value = "";
     otpLoginVerifyForm.hidden = true;
+    document.getElementById("loginOtpResendStatus").hidden = true;
     loginForm.hidden = false;
     document.body.classList.remove("otp-login-page");
     setLoginMode("otp");
     loginIdentifier.value = email;
     loginIdentifier.focus();
     loginMessage.textContent = message;
+    loginMessage.classList.toggle("auth-message-error", isError);
 }
 
 if (loginForm) {
@@ -221,6 +265,7 @@ if (loginForm) {
 
         if (loginMode === "otp") {
             const email = login.toLowerCase();
+            clearLoginMessageAnimation();
             loginMessage.textContent = "Sending sign-in code...";
             submitButton.disabled = true;
 
@@ -232,9 +277,20 @@ if (loginForm) {
                 setOtpStatus("");
             } catch (error) {
                 console.error(error);
-                loginMessage.textContent = error instanceof TypeError
+                const errorMessage = error instanceof TypeError
                     ? "Cannot reach the backend. Please try again shortly."
                     : error.message || "Could not send a sign-in code.";
+
+                if (/no account exists with this email/i.test(errorMessage)) {
+                    showAnimatedLoginMessage(
+                        errorMessage,
+                        "auth-message-email-missing",
+                        "#fbbf24"
+                    );
+                } else {
+                    loginMessage.textContent = errorMessage;
+                    loginMessage.classList.add("auth-message-error");
+                }
             } finally {
                 submitButton.disabled = false;
             }
@@ -243,6 +299,7 @@ if (loginForm) {
         }
 
         const password = loginPassword.value;
+        clearLoginMessageAnimation();
         loginMessage.textContent = "Logging in...";
         submitButton.disabled = true;
 
@@ -252,9 +309,16 @@ if (loginForm) {
             finishLogin(data);
         } catch (error) {
             console.error(error);
-            loginMessage.textContent = error instanceof TypeError
+            const errorMessage = error instanceof TypeError
                 ? "Cannot reach the backend. Please try again shortly."
                 : error.message || "Could not login.";
+
+            if (/invalid username\/email or password/i.test(errorMessage)) {
+                showInvalidCredentialsMessage();
+            } else {
+                loginMessage.textContent = errorMessage;
+                loginMessage.classList.add("auth-message-error");
+            }
         } finally {
             submitButton.disabled = false;
         }
@@ -270,7 +334,7 @@ if (otpLoginVerifyForm) {
         const submitButton = otpLoginVerifyForm.querySelector('button[type="submit"]');
 
         if (!email) {
-            return resetOtpLogin("Sign-in session expired. Request a new code.");
+            return resetOtpLogin("Sign-in session expired. Request a new code.", "", true);
         }
 
         setOtpStatus("Verifying code...");
@@ -291,9 +355,9 @@ if (otpLoginVerifyForm) {
                 : error.message || "Could not verify your code.";
 
             if (/expired|not found|already used|too many incorrect attempts/i.test(message)) {
-                resetOtpLogin(`${message} Request a new code.`, email);
+                resetOtpLogin(`${message} Request a new code.`, email, true);
             } else {
-                setOtpStatus(message);
+                setOtpStatus(message, true);
             }
         } finally {
             submitButton.disabled = false;
@@ -304,7 +368,7 @@ if (otpLoginVerifyForm) {
 document.getElementById("loginOtpResend")?.addEventListener("click", async () => {
     const email = sessionStorage.getItem(LOGIN_EMAIL_KEY);
     if (!email) {
-        return resetOtpLogin("Sign-in session expired. Request a new code.");
+        return resetOtpLogin("Sign-in session expired. Request a new code.", "", true);
     }
 
     const resendButton = document.getElementById("loginOtpResend");
@@ -320,7 +384,7 @@ document.getElementById("loginOtpResend")?.addEventListener("click", async () =>
         console.error(error);
         setOtpStatus(error instanceof TypeError
             ? "Cannot reach the backend. Please try again shortly."
-            : error.message || "Could not resend the sign-in code.");
+            : error.message || "Could not resend the sign-in code.", true);
         updateResendCooldown();
     }
 });

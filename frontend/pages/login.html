@@ -23,6 +23,19 @@
     <main class="auth-container">
 
         <div class="auth-content">
+            <p
+                id="loginMessage"
+                class="auth-message"
+                role="status"
+                aria-live="polite"
+            ></p>
+            <p
+                id="otpLoginStatus"
+                class="auth-message otp-login-status"
+                role="status"
+                aria-live="polite"
+                hidden
+            ></p>
             <form id="loginForm">
 
                 <div class="form-group">
@@ -102,18 +115,8 @@
                     Verify and sign in
                 </button>
 
-                <p
-                    id="otpLoginStatus"
-                    class="auth-message otp-login-status"
-                    role="status"
-                    aria-live="polite"
-                    hidden
-                ></p>
-
                 <div class="otp-resend-block">
-                    <p id="loginOtpResendStatus" class="auth-subtitle otp-resend-prompt">
-                        Didn’t receive the code?
-                    </p>
+                    <p id="loginOtpResendStatus" class="auth-subtitle otp-resend-prompt" aria-live="polite" hidden></p>
                     <div class="otp-resend-actions">
                         <button
                             type="button"
@@ -154,13 +157,6 @@
                 </svg>
                 Continue with Google
             </a>
-
-            <p
-                id="loginMessage"
-                class="auth-message"
-                role="status"
-                aria-live="polite"
-            ></p>
 
             <p class="auth-footer">
                 New to MUSTMAKE?

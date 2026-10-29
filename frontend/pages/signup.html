@@ -22,7 +22,12 @@
 
         <div class="auth-content">
 
-
+            <p
+                id="signupMessage"
+                class="auth-message"
+                role="status"
+                aria-live="polite"
+            ></p>
             <p class="auth-subtitle"></p>
 
             <form id="signupForm">
@@ -119,8 +124,9 @@
 
                 <p
                     id="signupResendStatus"
-                    class="auth-message"
+                    class="auth-message signup-resend-status"
                     aria-live="polite"
+                    hidden
                 ></p>
 
                 <button
@@ -132,13 +138,6 @@
                 </button>
 
             </form>
-
-            <p
-                id="signupMessage"
-                class="auth-message"
-                role="status"
-                aria-live="polite"
-            ></p>
 
             <p class="auth-footer">
                 Already have an account?

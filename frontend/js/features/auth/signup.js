@@ -72,6 +72,7 @@ function updateResendCooldown() {
         signupResend.textContent = remaining > 0
             ? `Resend code in ${Math.ceil(remaining / 1000)}s`
             : "Resend code";
+        resendStatus.hidden = false;
         resendStatus.textContent = remaining > 0
             ? "You can request another code when the timer ends."
             : "Didn't receive the code? You can resend it.";
@@ -88,7 +89,21 @@ function updateResendCooldown() {
     }
 }
 
-function returnToSignup(message) {
+function setSignupMessage(message, isError = false) {
+    const emailAlreadyRegistered = /email already registered/i.test(message);
+
+    signupMessage.textContent = message;
+    signupMessage.classList.toggle(
+        "auth-message-error",
+        isError && !emailAlreadyRegistered
+    );
+    signupMessage.classList.toggle(
+        "auth-message-success",
+        emailAlreadyRegistered
+    );
+}
+
+function returnToSignup(message, isError = true) {
     if (resendTimer) {
         clearInterval(resendTimer);
         resendTimer = null;
@@ -99,7 +114,9 @@ function returnToSignup(message) {
     signupOtpForm.hidden = true;
     signupForm.hidden = false;
     document.getElementById("signupOtp").value = "";
-    signupMessage.textContent = message;
+    resendStatus.textContent = "";
+    resendStatus.hidden = true;
+    setSignupMessage(message, isError);
 }
 
 if (signupForm && signupOtpForm) {
@@ -109,7 +126,7 @@ if (signupForm && signupOtpForm) {
             savedEmail,
             Number(sessionStorage.getItem(SIGNUP_SENT_AT_KEY)) || 0
         );
-        signupMessage.textContent = "Enter the code from your email to finish creating your account.";
+        setSignupMessage("Enter the code from your email to finish creating your account.");
     }
 
     signupForm.addEventListener("submit", async (event) => {
@@ -121,7 +138,7 @@ if (signupForm && signupOtpForm) {
         const password = document.getElementById("password").value;
         const submitButton = signupForm.querySelector('button[type="submit"]');
 
-        signupMessage.textContent = "Sending verification code...";
+        setSignupMessage("Sending verification code...");
         submitButton.disabled = true;
 
         try {
@@ -134,7 +151,7 @@ if (signupForm && signupOtpForm) {
             });
 
             setSignupStep(email, result.sentAt || Date.now());
-            signupMessage.textContent = result.message || "Verification code sent. Check your inbox and spam folder.";
+            setSignupMessage(result.message || "Verification code sent. Check your inbox and spam folder.");
         } catch (error) {
             const savedEmail = sessionStorage.getItem(SIGNUP_EMAIL_KEY);
             if (
@@ -145,9 +162,9 @@ if (signupForm && signupOtpForm) {
             }
 
             console.error(error);
-            signupMessage.textContent = error instanceof TypeError
+            setSignupMessage(error instanceof TypeError
                 ? "Cannot reach the backend. Please try again shortly."
-                : error.message || "Could not send a verification code.";
+                : error.message || "Could not send a verification code.", true);
         } finally {
             submitButton.disabled = false;
         }
@@ -164,7 +181,7 @@ if (signupForm && signupOtpForm) {
             return returnToSignup("Signup session expired. Please enter your details again.");
         }
 
-        signupMessage.textContent = "Verifying code...";
+        setSignupMessage("Verifying code...");
         submitButton.disabled = true;
 
         try {
@@ -174,7 +191,7 @@ if (signupForm && signupOtpForm) {
                 purpose: "signup"
             });
 
-            signupMessage.textContent = "Email verified. Signing you in...";
+            setSignupMessage("Email verified. Signing you in...");
             saveSession(data);
         } catch (error) {
             console.error(error);
@@ -183,9 +200,9 @@ if (signupForm && signupOtpForm) {
                 : error.message || "Could not verify your code.";
 
             if (/expired|restart signup|start signup again|signup details|too many incorrect attempts/i.test(message)) {
-                returnToSignup(`${message} Please enter your details again.`);
+                returnToSignup(`${message} Please enter your details again.`, true);
             } else {
-                signupMessage.textContent = message;
+                setSignupMessage(message, true);
             }
         } finally {
             submitButton.disabled = false;
@@ -199,21 +216,21 @@ if (signupForm && signupOtpForm) {
         }
 
         signupResend.disabled = true;
-        signupMessage.textContent = "Sending another verification code...";
+        setSignupMessage("Sending another verification code...");
 
         try {
             await postAuth("/api/auth/send-otp", { email, purpose: "signup" });
             sessionStorage.setItem(SIGNUP_SENT_AT_KEY, String(Date.now()));
             updateResendCooldown();
-            signupMessage.textContent = "A new verification code was sent.";
+            setSignupMessage("A new verification code was sent.");
         } catch (error) {
             console.error(error);
-            signupMessage.textContent = error instanceof TypeError
+            setSignupMessage(error instanceof TypeError
                 ? "Cannot reach the backend. Please try again shortly."
-                : error.message || "Could not resend the verification code.";
+                : error.message || "Could not resend the verification code.", true);
 
             if (/signup details expired/i.test(error.message)) {
-                returnToSignup("Signup details expired. Please enter them again.");
+                returnToSignup("Signup details expired. Please enter them again.", true);
             } else {
                 updateResendCooldown();
             }
@@ -221,6 +238,6 @@ if (signupForm && signupOtpForm) {
     });
 
     document.getElementById("editSignupDetails").addEventListener("click", () => {
-        returnToSignup("Update your details, then request a new verification code.");
+        returnToSignup("Update your details, then request a new verification code.", false);
     });
 }
