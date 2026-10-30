@@ -4388,6 +4388,17 @@ nav button,
     margin-top: 24px;
 }
 
+.exercise-mode-content {
+    min-height: 280px;
+    padding-inline: clamp(17px, 2.5vw, 26px);
+}
+
+.exercise-mode-content .exercise-workout-form {
+    display: flex;
+    min-height: 260px;
+    flex-direction: column;
+}
+
 .exercise-form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
@@ -4433,7 +4444,11 @@ nav button,
 }
 
 .exercise-done-button {
+    display: block;
+    width: 100%;
     min-width: 132px;
+    min-height: 48px;
+    margin-top: auto;
 }
 
 .exercise-done-button:disabled {
@@ -4505,9 +4520,6 @@ nav button,
         border-radius: 17px;
     }
 
-    .exercise-done-button {
-        width: 100%;
-    }
 }
 
 .main-button:hover {
