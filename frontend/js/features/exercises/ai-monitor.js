@@ -1,8 +1,11 @@
 import { createExerciseDetector } from "./exercise-detectors.mjs";
 import {
     CAMERA_PREFERENCE_CHANGE_EVENT,
+    SMART_CAMERA_MODE_CHANGE_EVENT,
     getCameraMirrorPreference,
-    getCameraMirrorPreferenceKey
+    getCameraMirrorPreferenceKey,
+    getSmartCameraModePreference,
+    getSmartCameraModePreferenceKey
 } from "./camera-preference.js";
 
 const MEDIAPIPE_VERSION = "1.1.1";
@@ -15,6 +18,11 @@ const POSE_MODEL =
 
 const MAX_REPETITIONS = 10000;
 const MAX_REVIEWED_VALUE = 150;
+const SHARED_EXERCISE_FEEDBACK = new Set([
+    "Can't see u.",
+    "Get set.",
+    "Nice rep."
+]);
 const INFERENCE_INTERVAL_MS = 110;
 
 const CONNECTIONS = [
@@ -49,35 +57,35 @@ function formatTime(seconds) {
 
 function cameraErrorMessage(error) {
     if (!window.isSecureContext) {
-        return "Camera access requires HTTPS or localhost. Open this page in a secure context and try again.";
+        return "Use HTTPS.";
     }
 
     if (
         error?.name === "NotAllowedError" ||
         error?.name === "SecurityError"
     ) {
-        return "Camera permission was denied. Allow camera access in your browser settings, then try again.";
+        return "Allow camera access.";
     }
 
     if (
         error?.name === "NotFoundError" ||
         error?.name === "DevicesNotFoundError"
     ) {
-        return "No camera was found. Connect a camera and try again.";
+        return "No camera found.";
     }
 
     if (
         error?.name === "NotReadableError" ||
         error?.name === "TrackStartError"
     ) {
-        return "The camera is unavailable or being used by another app. Close other camera apps and try again.";
+        return "Camera in use.";
     }
 
     if (error?.name === "OverconstrainedError") {
-        return "The camera could not provide a supported video mode. Try another camera.";
+        return "Try another camera.";
     }
 
-    return "Could not start the camera. Check your browser and camera settings, then try again.";
+    return "Camera unavailable.";
 }
 
 async function createPoseLandmarker() {
@@ -129,6 +137,9 @@ export function mountAiMonitor(
     const video = root.querySelector("#monitorVideo");
     const canvas = root.querySelector("#monitorCanvas");
     const preview = root.querySelector(".monitor-preview");
+    const previewSlot = root.querySelector(".monitor-preview-slot");
+    const smartOverlay = root.querySelector(".monitor-smart-overlay");
+    const monitor = root.querySelector(".exercise-monitor");
     const placeholder = root.querySelector(".monitor-preview-placeholder");
     const status = root.querySelector("#monitorStatus");
     const cameraStatus = root.querySelector("#monitorCameraStatus");
@@ -136,6 +147,7 @@ export function mountAiMonitor(
     const countOutput = root.querySelector("#monitorRepCount");
     const timeOutput = root.querySelector("#monitorSessionTime");
     const finishButton = root.querySelector("#monitorFinish");
+    const monitorControls = root.querySelector(".monitor-controls");
     const summary = root.querySelector("#monitorSummary");
     const summaryExercise = root.querySelector("#monitorSummaryExercise");
     const summaryMetric = root.querySelector("#monitorSummaryMetric");
@@ -144,6 +156,40 @@ export function mountAiMonitor(
     const correctionError = root.querySelector("#monitorCorrectionError");
     const saveButton = root.querySelector("#monitorSave");
     const discardButton = root.querySelector("#monitorDiscard");
+    const monitorHeading = status.closest(".monitor-heading");
+    const monitorStats = root.querySelector(".monitor-stats");
+    const smartOverlayNodes = [
+        monitorHeading,
+        monitorStats,
+        feedback,
+        monitorControls
+    ].filter(Boolean);
+    const smartOverlaySlots = smartOverlayNodes.map(node => {
+        const marker = document.createComment("smart camera overlay position");
+        node.parentNode.insertBefore(marker, node);
+        return { marker, node };
+    });
+
+    function findScrollContainer(element) {
+        let ancestor = element.parentElement;
+
+        while (
+            ancestor &&
+            ancestor !== document.body &&
+            ancestor !== document.documentElement
+        ) {
+            const style = window.getComputedStyle(ancestor);
+            const canScroll = /(auto|scroll|overlay)/.test(style.overflowY);
+            if (canScroll && ancestor.scrollHeight > ancestor.clientHeight + 1) {
+                return ancestor;
+            }
+            ancestor = ancestor.parentElement;
+        }
+
+        return document.scrollingElement || document.documentElement;
+    }
+
+    const scrollContainer = findScrollContainer(previewSlot);
 
     const context = canvas.getContext("2d");
     const detector = createExerciseDetector(exercise.slug);
@@ -163,6 +209,16 @@ export function mountAiMonitor(
     let disposed = false;
     let lastInferenceAt = 0;
     let lastTimestamp = 0;
+    let lastFeedbackAnimationAt = -Infinity;
+    let smartCameraEnabled = false;
+    let smartScrollArmed = false;
+    let lastScrollPosition = 0;
+    let scrollFrame = null;
+    let previewFixed = false;
+    let previewTargetFullscreen = false;
+    let previewTransitioning = false;
+    let previewTransitionGeneration = 0;
+    let previewTransitionTimer = null;
 
     let elapsedMs = Math.max(
         0,
@@ -196,11 +252,208 @@ export function mountAiMonitor(
 
     correction.value = String(rawCount);
     detector.reset(isPlank ? elapsedMs : rawCount);
+    lastScrollPosition = getScrollPosition();
+
+    function getScrollPosition() {
+        if (
+            scrollContainer === document.scrollingElement ||
+            scrollContainer === document.documentElement ||
+            scrollContainer === document.body
+        ) {
+            return window.scrollY || scrollContainer.scrollTop || 0;
+        }
+        return scrollContainer.scrollTop;
+    }
+
+    function getVisibleViewport() {
+        const viewport = window.visualViewport;
+        return {
+            left: viewport?.offsetLeft ?? 0,
+            top: viewport?.offsetTop ?? 0,
+            width: viewport?.width ?? window.innerWidth,
+            height: viewport?.height ?? window.innerHeight
+        };
+    }
+
+    function setPreviewGeometry(rect) {
+        preview.style.left = `${rect.left}px`;
+        preview.style.top = `${rect.top}px`;
+        preview.style.width = `${rect.width}px`;
+        preview.style.height = `${rect.height}px`;
+    }
+
+    function getFullscreenPreviewGeometry() {
+        return getVisibleViewport();
+    }
+
+    function finishPreviewTransition(generation) {
+        if (generation !== previewTransitionGeneration || !previewTransitioning) {
+            return;
+        }
+
+        clearTimeout(previewTransitionTimer);
+        previewTransitionTimer = null;
+        previewTransitioning = false;
+
+        if (previewTargetFullscreen) {
+            document.body.classList.add("smart-camera-fullscreen");
+        } else {
+            previewSlot.append(preview);
+            preview.classList.remove("is-fixed", "is-fullscreen");
+            ["left", "top", "width", "height", "transition"].forEach(property => {
+                preview.style.removeProperty(property);
+            });
+            previewFixed = false;
+            document.body.classList.remove("smart-camera-fullscreen");
+            if (!smartCameraEnabled) restoreSmartOverlayNodes();
+        }
+    }
+
+    function transitionPreview(fullscreen) {
+        if (previewTargetFullscreen === fullscreen) return;
+
+        const current = preview.getBoundingClientRect();
+        if (!current.width || !current.height) return;
+
+        previewTargetFullscreen = fullscreen;
+        previewTransitionGeneration += 1;
+        const generation = previewTransitionGeneration;
+        clearTimeout(previewTransitionTimer);
+        previewTransitioning = true;
+
+        preview.style.transition = "none";
+        if (!previewFixed) {
+            preview.classList.add("is-fixed");
+            previewFixed = true;
+            document.body.append(preview);
+        }
+        setPreviewGeometry(current);
+        void preview.offsetWidth;
+
+        requestAnimationFrame(() => {
+            if (disposed || generation !== previewTransitionGeneration) return;
+
+            preview.style.removeProperty("transition");
+            preview.classList.toggle("is-fullscreen", fullscreen);
+            setPreviewGeometry(fullscreen
+                ? getFullscreenPreviewGeometry()
+                : previewSlot.getBoundingClientRect());
+
+            previewTransitionTimer = window.setTimeout(
+                () => finishPreviewTransition(generation),
+                360
+            );
+        });
+    }
+
+    function retargetExpandedPreview() {
+        if (!previewFixed || previewTargetFullscreen || !previewTransitioning) return;
+
+        setPreviewGeometry(previewSlot.getBoundingClientRect());
+        clearTimeout(previewTransitionTimer);
+        const generation = previewTransitionGeneration;
+        previewTransitionTimer = window.setTimeout(
+            () => finishPreviewTransition(generation),
+            360
+        );
+    }
+
+    function restoreSmartOverlayNodes() {
+        smartOverlaySlots.forEach(({ marker, node }) => {
+            if (marker.parentNode) {
+                marker.parentNode.insertBefore(node, marker.nextSibling);
+            }
+        });
+    }
+
+    function applySmartCameraPreference(enabled = getSmartCameraModePreference()) {
+        const nextEnabled = Boolean(enabled);
+        if (smartCameraEnabled === nextEnabled) return;
+
+        smartCameraEnabled = nextEnabled;
+        monitor.dataset.smartCameraMode = String(nextEnabled);
+        smartScrollArmed = false;
+        lastScrollPosition = getScrollPosition();
+
+        if (nextEnabled) {
+            smartOverlayNodes.forEach(node => smartOverlay.append(node));
+        } else {
+            if (previewTargetFullscreen || previewFixed) {
+                transitionPreview(false);
+            } else {
+                restoreSmartOverlayNodes();
+            }
+        }
+    }
+
+    function updateSmartCameraOnScroll() {
+        if (!smartCameraEnabled || lifecycle !== "running") {
+            lastScrollPosition = getScrollPosition();
+            return;
+        }
+
+        const currentScrollPosition = Math.max(0, getScrollPosition());
+        if (currentScrollPosition > lastScrollPosition) smartScrollArmed = true;
+        lastScrollPosition = currentScrollPosition;
+        if (!smartScrollArmed) return;
+
+        // Workout pages can have very little scroll range, so the preview's
+        // top edge may never reach the viewport top. Use the real scroller's
+        // position as the trigger and return to the inline preview at its top.
+        const shouldBeFullscreen = currentScrollPosition > 0.5;
+        if (!shouldBeFullscreen && previewFixed && !previewTargetFullscreen) {
+            retargetExpandedPreview();
+        } else {
+            transitionPreview(shouldBeFullscreen);
+        }
+    }
+
+    function scheduleSmartCameraScrollUpdate() {
+        if (scrollFrame != null) return;
+
+        scrollFrame = requestAnimationFrame(() => {
+            scrollFrame = null;
+            updateSmartCameraOnScroll();
+        });
+    }
+
+    function handlePreviewTransitionEnd(event) {
+        if (
+            event.target === preview &&
+            ["width", "height"].includes(event.propertyName)
+        ) {
+            finishPreviewTransition(previewTransitionGeneration);
+        }
+    }
+
+    function handleWindowResize() {
+        if (previewFixed && previewTargetFullscreen) {
+            if (!previewTransitioning) preview.style.transition = "none";
+            setPreviewGeometry(getFullscreenPreviewGeometry());
+            if (!previewTransitioning) {
+                void preview.offsetWidth;
+                preview.style.removeProperty("transition");
+            }
+        } else {
+            retargetExpandedPreview();
+        }
+        resizeCanvas();
+    }
+
+    monitor.dataset.smartCameraMode = "false";
+    applySmartCameraPreference();
 
     function setStatus(state, message) {
         lifecycle = state;
         status.dataset.state = state;
         status.textContent = message;
+
+        if (state === "running") {
+            smartScrollArmed = false;
+            lastScrollPosition = getScrollPosition();
+        } else if (previewTargetFullscreen) {
+            transitionPreview(false);
+        }
 
         finishButton.disabled =
             !["ready", "running"].includes(state) &&
@@ -225,7 +478,43 @@ export function mountAiMonitor(
     }
 
     function setFeedback(message) {
-        feedback.textContent = message;
+        const nextMessage = String(message ?? "");
+        if (feedback.textContent === nextMessage) return;
+
+        feedback.textContent = nextMessage;
+        feedback.dataset.tone = nextMessage === "Get set."
+            ? "setup"
+            : /^(Nice rep|Nice jump|Strong form|Great|Perfect)\b/i.test(nextMessage)
+                ? "positive"
+                : "negative";
+        const now = performance.now();
+        if (now - lastFeedbackAnimationAt < 350) return;
+
+        lastFeedbackAnimationAt = now;
+        feedback.classList.remove("is-animating");
+        void feedback.offsetWidth;
+        feedback.classList.add("is-animating");
+    }
+
+    function setExerciseFeedback(message) {
+        if (message === "Nice jump.") {
+            setFeedback("Nice rep.");
+            return;
+        }
+
+        if (message?.startsWith("Can't see ")) {
+            setFeedback(message);
+            return;
+        }
+
+        if (SHARED_EXERCISE_FEEDBACK.has(message)) {
+            setFeedback(message);
+            return;
+        }
+
+        if (feedback.textContent.startsWith("Can't see ")) {
+            setFeedback("Get set.");
+        }
     }
 
     function clearOverlay() {
@@ -234,6 +523,8 @@ export function mountAiMonitor(
     }
 
     function resizeCanvas() {
+        if (previewTransitioning || previewFixed) return;
+
         const bounds = canvas.getBoundingClientRect();
 
         if (!bounds.width || !bounds.height) {
@@ -255,6 +546,10 @@ export function mountAiMonitor(
             Math.round(bounds.height * ratio)
         );
 
+        const sizeChanged =
+            canvas.width !== pixelWidth ||
+            canvas.height !== pixelHeight;
+
         if (canvas.width !== pixelWidth) {
             canvas.width = pixelWidth;
         }
@@ -272,7 +567,7 @@ export function mountAiMonitor(
             0
         );
 
-        clearOverlay();
+        if (sizeChanged) clearOverlay();
     }
 
     function updatePreviewAspectRatio() {
@@ -280,8 +575,9 @@ export function mountAiMonitor(
             return;
         }
 
-        preview.style.aspectRatio =
-            `${video.videoWidth} / ${video.videoHeight}`;
+        const aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+        preview.style.aspectRatio = aspectRatio;
+        previewSlot.style.aspectRatio = aspectRatio;
 
         requestAnimationFrame(() => {
             if (!disposed) {
@@ -312,7 +608,10 @@ export function mountAiMonitor(
             return;
         }
 
-        const scale = Math.min(
+        const fitScale = preview.classList.contains("is-fullscreen")
+            ? Math.max
+            : Math.min;
+        const scale = fitScale(
             bounds.width / video.videoWidth,
             bounds.height / video.videoHeight
         );
@@ -473,14 +772,11 @@ export function mountAiMonitor(
                 );
 
                 elapsedMs = result.elapsedMs;
-                setFeedback(result.feedback);
+                setExerciseFeedback(result.feedback);
                 updateClock();
             } else {
                 detector.loseTracking();
-
-                setFeedback(
-                    "Person not detected. Move fully into the camera frame."
-                );
+                setExerciseFeedback(detector.feedback);
             }
 
             return;
@@ -504,7 +800,7 @@ export function mountAiMonitor(
             }
         }
 
-        setFeedback(result.feedback);
+        setExerciseFeedback(result.feedback);
     }
 
     function processFrames(now) {
@@ -545,7 +841,7 @@ export function mountAiMonitor(
                 releaseMonitoring();
 
                 const message =
-                    "Pose tracking stopped unexpectedly. Restart monitoring to try again.";
+                    "AI paused. Restart.";
 
                 cameraStatus.textContent = "Tracking stopped";
                 setFeedback(message);
@@ -579,7 +875,7 @@ export function mountAiMonitor(
             }
 
             setFeedback(
-                "Tracking paused while this page is hidden. Return to the page to resume."
+                "Paused in background."
             );
         } else if (
             !document.hidden &&
@@ -587,7 +883,7 @@ export function mountAiMonitor(
             animationFrame == null
         ) {
             setFeedback(
-                "Tracking resumed. Stand in view to re-establish your starting position."
+                "Welcome back."
             );
 
             animationFrame = requestAnimationFrame(processFrames);
@@ -614,7 +910,7 @@ export function mountAiMonitor(
 
         if (!navigator.mediaDevices?.getUserMedia) {
             const message =
-                "Camera access is not supported by this browser. Try a current browser over HTTPS.";
+                "Camera unsupported.";
 
             setStatus("error", message);
             setFeedback(message);
@@ -623,13 +919,13 @@ export function mountAiMonitor(
 
         setStatus(
             "initializing",
-            "Requesting camera and loading pose tracking…"
+            "Starting AI."
         );
 
         cameraStatus.textContent = "Connecting…";
 
         setFeedback(
-            "Allow camera access when your browser asks. Camera video stays on this device."
+            "Allow camera."
         );
 
         try {
@@ -695,7 +991,7 @@ export function mountAiMonitor(
                     releaseMonitoring();
 
                     const message =
-                        "Camera connection ended. Start monitoring again when ready.";
+                        "Camera disconnected.";
 
                     setFeedback(message);
                     setStatus("error", message);
@@ -726,7 +1022,7 @@ export function mountAiMonitor(
             setStatus("running", "Monitoring");
 
             setFeedback(
-                "Pose tracking is ready. Stand in view to establish your starting position."
+                "Get set."
             );
 
             animationFrame = requestAnimationFrame(processFrames);
@@ -751,8 +1047,7 @@ export function mountAiMonitor(
                 error?.name === "NotReadableError" ||
                 error?.name === "OverconstrainedError"
                     ? cameraErrorMessage(error)
-                    : error?.message ||
-                        "AI monitoring could not start. Try again.";
+                    : "AI failed. Retry.";
 
             cameraStatus.textContent = "Camera off";
             setFeedback(message);
@@ -786,13 +1081,13 @@ export function mountAiMonitor(
 
         setFeedback(
             isPlank
-                ? "Session finished. Review the time counted while your plank posture was aligned."
-                : "Session finished. Review the detected count and make any needed correction."
+                ? "Review your time."
+                : "Review your count."
         );
 
         setStatus(
             "finished",
-            "Session finished. Review before saving."
+            "Review to save."
         );
 
         correction.focus();
@@ -832,10 +1127,10 @@ export function mountAiMonitor(
         onWorkoutSaved?.();
 
         setFeedback(
-            "Session discarded. Start monitoring when you are ready."
+            "Session cleared."
         );
 
-        setStatus("idle", "Camera off");
+        setStatus("idle", "Ready");
     }
 
     function correctedCount() {
@@ -852,7 +1147,7 @@ export function mountAiMonitor(
 
         correctionError.textContent = valid
             ? ""
-            : `Range has to be between ${minimum} to ${maximum}${isPlank ? " seconds" : isJumpCount ? " jumps" : ""}.`;
+            : `Use ${minimum}–${maximum}${isPlank ? " sec" : isJumpCount ? " jumps" : " reps"}.`;
 
         correction.setAttribute(
             "aria-invalid",
@@ -1029,15 +1324,9 @@ export function mountAiMonitor(
             window.clearPrivateCaches?.();
             onWorkoutSaved?.();
 
-            saveToast?.update("Workout saved successfully.", {
-                type: "success",
-                actions: [
-                    { label: "View today", href: "/today" },
-                    { label: "Open history", href: "/history" }
-                ]
-            });
-
-            setStatus("saved", "Workout saved.");
+            window.queueToast?.("Workout saved.", "success");
+            window.location.replace("/today");
+            return;
         } catch (error) {
             console.error("AI workout save error:", error);
 
@@ -1093,6 +1382,15 @@ export function mountAiMonitor(
 
         listeners.abort();
         resizeObserver?.disconnect();
+        if (scrollFrame != null) cancelAnimationFrame(scrollFrame);
+        clearTimeout(previewTransitionTimer);
+        previewSlot.append(preview);
+        preview.classList.remove("is-fixed", "is-fullscreen");
+        ["left", "top", "width", "height", "transition"].forEach(property => {
+            preview.style.removeProperty(property);
+        });
+        previewFixed = false;
+        document.body.classList.remove("smart-camera-fullscreen");
 
         return saveSnapshot();
     }
@@ -1133,11 +1431,37 @@ export function mountAiMonitor(
         { signal: listeners.signal }
     );
 
-    window.addEventListener(
-        "resize",
-        resizeCanvas,
-        { signal: listeners.signal }
-    );
+    window.addEventListener("resize", handleWindowResize, {
+        signal: listeners.signal
+    });
+
+    window.visualViewport?.addEventListener("resize", handleWindowResize, {
+        signal: listeners.signal
+    });
+
+    window.visualViewport?.addEventListener("scroll", handleWindowResize, {
+        signal: listeners.signal
+    });
+
+    window.addEventListener("scroll", scheduleSmartCameraScrollUpdate, {
+        passive: true,
+        signal: listeners.signal
+    });
+
+    scrollContainer.addEventListener("scroll", scheduleSmartCameraScrollUpdate, {
+        passive: true,
+        signal: listeners.signal
+    });
+
+    document.addEventListener("scroll", scheduleSmartCameraScrollUpdate, {
+        capture: true,
+        passive: true,
+        signal: listeners.signal
+    });
+
+    preview.addEventListener("transitionend", handlePreviewTransitionEnd, {
+        signal: listeners.signal
+    });
 
     video.addEventListener(
         "loadedmetadata",
@@ -1158,13 +1482,19 @@ export function mountAiMonitor(
     );
 
     window.addEventListener(
+        SMART_CAMERA_MODE_CHANGE_EVENT,
+        event => applySmartCameraPreference(event.detail?.enabled),
+        { signal: listeners.signal }
+    );
+
+    window.addEventListener(
         "storage",
         event => {
-            if (
-                event.key === "user" ||
-                event.key === getCameraMirrorPreferenceKey()
-            ) {
+            if (event.key === "user" || event.key === getCameraMirrorPreferenceKey()) {
                 applyCameraMirrorPreference();
+            }
+            if (event.key === "user" || event.key === getSmartCameraModePreferenceKey()) {
+                applySmartCameraPreference();
             }
         },
         { signal: listeners.signal }
@@ -1218,13 +1548,7 @@ export function mountAiMonitor(
         summary.hidden = false;
 
         if (snapshot.saved) {
-            window.showToast("Workout saved successfully.", {
-                type: "success",
-                actions: [
-                    { label: "View today", href: "/today" },
-                    { label: "Open history", href: "/history" }
-                ]
-            });
+            window.showToast("Workout saved.", { type: "success" });
 
             setStatus("saved", "Workout saved.");
         } else {
@@ -1283,10 +1607,10 @@ export function mountAiMonitor(
         setStatus("ready", "Monitoring paused");
 
         setFeedback(
-            "Monitoring paused. Your detected count is retained; you can resume or finish the session."
+            "Count saved."
         );
     } else {
-        setStatus("idle", "Camera off");
+        setStatus("idle", "Ready");
     }
 
     if (!snapshot?.finished && !pendingWorkout) {

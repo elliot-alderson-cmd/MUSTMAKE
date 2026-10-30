@@ -61,20 +61,38 @@
     background: #ef4444;
 }
 
-.monitor-preview {
+.monitor-preview-slot {
     position: relative;
-    isolation: isolate;
-    display: grid;
+    display: block;
     width: 100%;
     box-sizing: border-box;
     min-width: 0;
     aspect-ratio: 4 / 3;
     max-height: min(70svh, 720px);
+}
+
+.monitor-preview {
+    position: absolute;
+    inset: 0;
+    isolation: isolate;
+    display: grid;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    min-width: 0;
     overflow: hidden;
     place-items: center;
     border: 0;
     border-radius: 0;
     background: transparent;
+    transition:
+        top 300ms cubic-bezier(0.2, 0.75, 0.25, 1),
+        left 300ms cubic-bezier(0.2, 0.75, 0.25, 1),
+        width 300ms cubic-bezier(0.2, 0.75, 0.25, 1),
+        height 300ms cubic-bezier(0.2, 0.75, 0.25, 1),
+        border-radius 300ms ease,
+        border-color 300ms ease,
+        box-shadow 300ms ease;
 }
 
 .monitor-preview video,
@@ -126,12 +144,263 @@
 }
 
 @media (max-width: 768px), (pointer: coarse) {
-    .monitor-preview {
+    .monitor-preview-slot {
         width: 100%;
         max-width: 100%;
         max-height: min(52svh, 480px);
         margin-inline: auto;
-        overflow: hidden;
+    }
+}
+
+.monitor-preview.is-fixed {
+    position: fixed;
+    inset: auto;
+    z-index: 2147483000;
+    max-height: none;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 14px;
+    background: #080a0d;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.48);
+    pointer-events: none;
+}
+
+.monitor-preview.is-fixed:not(.is-fullscreen) {
+    border-color: transparent;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.monitor-preview.is-fullscreen {
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: #050608;
+    box-shadow: none;
+}
+
+body.smart-camera-fullscreen > :not(.monitor-preview) {
+    visibility: hidden !important;
+}
+
+.monitor-preview.is-fullscreen video {
+    object-fit: cover;
+}
+
+.monitor-smart-overlay {
+    position: absolute;
+    z-index: 3;
+    inset: 0;
+    pointer-events: none;
+}
+
+.monitor-smart-overlay .monitor-heading {
+    position: absolute;
+    top: 9px;
+    left: 9px;
+    display: flex;
+    max-width: calc(100% - 94px);
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+}
+
+.monitor-smart-overlay .monitor-status,
+.monitor-smart-overlay .monitor-camera-status,
+.monitor-smart-overlay .monitor-stat {
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 0;
+    color: #f8fafc;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95);
+}
+
+.monitor-smart-overlay .monitor-status,
+.monitor-smart-overlay .monitor-camera-status {
+    min-height: 28px;
+    margin: 0;
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.monitor-smart-overlay .monitor-camera-status {
+    position: absolute;
+    top: 45px;
+    left: 9px;
+}
+
+.monitor-smart-overlay .monitor-stats {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    display: block;
+    width: auto;
+    margin: 0;
+}
+
+.monitor-smart-overlay .monitor-stat {
+    display: grid;
+    min-width: 64px;
+    justify-items: center;
+    gap: 1px;
+    padding: 5px 9px;
+}
+
+.monitor-smart-overlay .monitor-stat-repetitions span {
+    display: none;
+}
+
+.monitor-smart-overlay .monitor-stat span {
+    color: rgba(248, 250, 252, 0.82);
+    font-size: 9px;
+    line-height: 1.2;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95);
+}
+
+.monitor-smart-overlay .monitor-stat strong {
+    color: #fff;
+    font-size: 17px;
+    line-height: 1.1;
+}
+
+.monitor-smart-overlay .monitor-controls {
+    position: absolute;
+    z-index: 4;
+    bottom: 68px;
+    left: 50%;
+    width: min(220px, calc(100% - 32px));
+    transform: translateX(-50%);
+    pointer-events: auto;
+}
+
+.monitor-smart-overlay .monitor-controls button {
+    width: 100%;
+    min-height: 44px;
+    pointer-events: auto;
+}
+
+.monitor-smart-overlay #monitorFeedback {
+    position: absolute;
+    right: 9px;
+    bottom: 9px;
+    left: 9px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    color: #ff6b73;
+    background: transparent;
+    box-shadow: none;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95);
+}
+
+.monitor-smart-overlay #monitorFeedback[data-tone="positive"] {
+    color: #4ade80;
+}
+
+.monitor-smart-overlay #monitorFeedback[data-tone="setup"] {
+    color: #facc15;
+}
+
+#monitorFeedback.is-animating {
+    animation: monitor-feedback-pop 360ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+@keyframes monitor-feedback-pop {
+    from {
+        opacity: 0.35;
+        translate: 0 8px;
+        scale: 0.97;
+    }
+
+    to {
+        opacity: 1;
+        translate: 0 0;
+        scale: 1;
+    }
+}
+
+.monitor-preview.is-fullscreen .monitor-smart-overlay .monitor-heading {
+    top: max(14px, env(safe-area-inset-top));
+    left: max(14px, env(safe-area-inset-left));
+    max-width: calc(100% - 160px);
+    gap: 7px;
+}
+
+.monitor-preview.is-fullscreen .monitor-smart-overlay .monitor-camera-status {
+    top: max(58px, calc(env(safe-area-inset-top) + 44px));
+    left: max(14px, env(safe-area-inset-left));
+}
+
+.monitor-preview.is-fullscreen .monitor-smart-overlay .monitor-stats {
+    top: max(14px, env(safe-area-inset-top));
+    right: max(14px, env(safe-area-inset-right));
+}
+
+.monitor-preview.is-fullscreen .monitor-smart-overlay .monitor-status,
+.monitor-preview.is-fullscreen .monitor-smart-overlay .monitor-camera-status {
+    min-height: 36px;
+    padding: 8px 11px;
+    font-size: 12px;
+}
+
+.monitor-preview.is-fullscreen .monitor-smart-overlay .monitor-stat {
+    min-width: 76px;
+    padding: 8px 12px;
+}
+
+.monitor-preview.is-fullscreen .monitor-smart-overlay .monitor-stat strong {
+    font-size: 42px;
+    line-height: 1;
+}
+
+.monitor-preview.is-fullscreen .monitor-smart-overlay .monitor-controls {
+    top: auto;
+    right: auto;
+    bottom: max(92px, calc(env(safe-area-inset-bottom) + 76px));
+    left: 50%;
+    width: min(220px, calc(100% - 32px));
+    transform: translateX(-50%);
+}
+
+.monitor-preview.is-fullscreen .monitor-smart-overlay #monitorFeedback {
+    top: max(14px, env(safe-area-inset-top));
+    right: max(14px, env(safe-area-inset-right));
+    bottom: auto;
+    left: auto;
+    width: min(420px, calc(100% - 28px));
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: right;
+    transform: none;
+}
+
+.monitor-preview.is-fullscreen .monitor-smart-overlay .monitor-stats {
+    top: auto;
+    right: auto;
+    bottom: max(18px, env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .monitor-preview {
+        transition-duration: 1ms;
     }
 }
 .monitor-camera-icon {
@@ -248,9 +517,24 @@
 
 #monitorFeedback {
     margin: 0 0 8px;
-    color: var(--text-secondary);
-    font-size: 11px;
-    line-height: 1.5;
+    color: #ff6b73;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+#monitorFeedback[data-tone="positive"] {
+    color: #4ade80;
+}
+
+#monitorFeedback[data-tone="setup"] {
+    color: #facc15;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #monitorFeedback.is-animating {
+        animation: none;
+    }
 }
 
 .monitor-summary {

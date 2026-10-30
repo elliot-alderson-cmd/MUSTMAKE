@@ -1,9 +1,12 @@
 import {
     getCameraMirrorPreference,
-    setCameraMirrorPreference
+    setCameraMirrorPreference,
+    getSmartCameraModePreference,
+    setSmartCameraModePreference
 } from "./camera-preference.js";
 
 const toggle = document.getElementById("cameraMirrorToggle");
+const smartCameraToggle = document.getElementById("smartCameraToggle");
 const dangerZone = document.getElementById("dangerZone");
 const deleteAccountButton = document.getElementById("deleteAccountButton");
 
@@ -31,6 +34,21 @@ toggle.addEventListener("change", () => {
 
     window.showToast(
         saved ? "Camera preference saved." : "Could not save camera preference.",
+        { type: saved ? "success" : "error" }
+    );
+});
+
+smartCameraToggle.checked = getSmartCameraModePreference();
+
+smartCameraToggle.addEventListener("change", () => {
+    const saved = setSmartCameraModePreference(smartCameraToggle.checked);
+
+    if (!saved) {
+        smartCameraToggle.checked = getSmartCameraModePreference();
+    }
+
+    window.showToast(
+        saved ? "Smart scrolling camera preference saved." : "Could not save smart camera preference.",
         { type: saved ? "success" : "error" }
     );
 });

@@ -4174,6 +4174,32 @@ nav button,
     cursor: default;
 }
 
+.exercise-detail-media-content {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+}
+
+.exercise-growth-tagline {
+    max-width: 100%;
+    margin: 0;
+    padding-inline: 4px;
+    color: #f2f2f2;
+    font-size: clamp(16px, 2vw, 20px);
+    font-weight: 600;
+    line-height: 1.3;
+    text-align: center;
+    text-wrap: balance;
+}
+
+.exercise-growth-tagline span {
+    color: #d6b45e;
+    text-shadow: 0 0 16px rgba(214, 180, 94, 0.22);
+}
+
 
 .main-button {
     color: var(--text-on-accent) !important;

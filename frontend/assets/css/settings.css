@@ -25,6 +25,24 @@
     font-size: 1rem;
 }
 
+.settings-row-smart-camera {
+    padding-top: 1rem;
+    border-top: 1px solid var(--glass-border);
+}
+
+.settings-row-copy {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.settings-row-copy p {
+    max-width: 36rem;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
 .settings-switch {
     position: relative;
     display: inline-flex;

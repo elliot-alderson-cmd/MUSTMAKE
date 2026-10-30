@@ -170,19 +170,22 @@
         return `
             <div class="exercise-monitor">
 
-                <p id="monitorFeedback" aria-live="polite">The pose model loads only after you enter AI Mode. Stand in view when tracking starts.</p>
+                <p id="monitorFeedback" aria-live="polite">Loading AI.</p>
 
                 <div class="monitor-heading">
-                    <span id="monitorStatus" class="monitor-status" role="status" aria-live="polite">Camera off</span>
+                    <span id="monitorStatus" class="monitor-status" role="status" aria-live="polite">Ready</span>
                 </div>
 
-                <div class="monitor-preview">
-                    <video id="monitorVideo" playsinline muted hidden aria-label="Live camera preview"></video>
-                    <canvas id="monitorCanvas" width="640" height="480" aria-label="Detected body landmarks and skeleton overlay"></canvas>
-                    <div class="monitor-preview-placeholder" aria-hidden="true"></div>
+                <div class="monitor-preview-slot">
+                    <div class="monitor-preview">
+                        <video id="monitorVideo" playsinline muted hidden aria-label="Live camera preview"></video>
+                        <canvas id="monitorCanvas" width="640" height="480" aria-label="Detected body landmarks and skeleton overlay"></canvas>
+                        <div class="monitor-preview-placeholder" aria-hidden="true"></div>
+                        <div class="monitor-smart-overlay"></div>
+                    </div>
                 </div>
 
-                <p id="monitorCameraStatus" class="monitor-camera-status" role="status" aria-live="polite">Camera off</p>
+                <p id="monitorCameraStatus" class="monitor-camera-status" hidden></p>
 
                 <div class="monitor-controls" aria-label="Monitoring controls">
                     <button id="monitorFinish" class="secondary-button" type="button" disabled>Finish Session</button>
@@ -190,7 +193,7 @@
 
                 <div class="monitor-stats monitor-stats-single" aria-label="Live session statistics">
                     ${isPlank ? "" : `
-                        <div class="monitor-stat">
+                        <div class="monitor-stat monitor-stat-repetitions">
                             <span>Repetitions</span>
                             <strong id="monitorRepCount" aria-live="polite">0</strong>
                         </div>
@@ -272,10 +275,10 @@
         const selectedMode = pendingWorkout &&
             availableModes.includes(pendingWorkout.mode)
             ? pendingWorkout.mode
-            : hasManualMode
-                ? "manual"
-                : hasAiMode
-                    ? "ai"
+            : hasAiMode
+                ? "ai"
+                : hasManualMode
+                    ? "manual"
                     : null;
 
         const modeLabel = mode => mode === "ai" ? "AI Mode" : "Manual Entry";
@@ -313,7 +316,7 @@
             modeContent.dataset.mode = "ai";
             modeContent.querySelector("#monitorStatus").textContent = "Loading AI monitor…";
             modeContent.querySelector("#monitorFeedback").textContent =
-                "Loading the camera and pose-monitor controls…";
+                "Loading AI…";
 
             monitorModulePromise
                 .then(({ mountAiMonitor }) => {
@@ -349,7 +352,7 @@
                         "AI monitor unavailable";
 
                     modeContent.querySelector("#monitorFeedback").textContent =
-                        "The AI monitor could not be loaded. Manual Entry remains available; reload this page to retry.";
+                        "AI unavailable.";
                 });
         }
 
@@ -413,7 +416,12 @@
 
             <div class="exercise-detail-layout">
                 <section class="exercise-demo-panel" aria-label="Exercise demonstration">
-                    ${renderMedia(exercise)}
+                    <div class="exercise-detail-media-content">
+                        ${renderMedia(exercise)}
+                        <p class="exercise-growth-tagline">
+                            It's your <span>growth,</span> keep it real
+                        </p>
+                    </div>
                 </section>
 
                 <section class="exercise-workout-panel" aria-label="Workout modes">
@@ -588,14 +596,8 @@
 
                 clearPendingWorkout();
                 form.reset();
-
-                saveToast?.update("Workout saved.", {
-                    type: "success",
-                    actions: [
-                        { label: "View today", href: "/today" },
-                        { label: "Open history", href: "/history" }
-                    ]
-                });
+                window.queueToast?.("Workout saved.", "success");
+                window.location.replace("/today");
             } catch (error) {
                 console.error("Save workout error:", error);
 

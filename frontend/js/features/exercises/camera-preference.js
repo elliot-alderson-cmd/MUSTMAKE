@@ -1,7 +1,9 @@
 const CAMERA_MIRROR_KEY_PREFIX = "mustmake_camera_mirror:";
+const SMART_CAMERA_MODE_KEY_PREFIX = "mustmake_smart_camera_mode:";
 const CAMERA_PREFERENCE_CHANGE_EVENT = "mustmake:camera-preference-change";
+const SMART_CAMERA_MODE_CHANGE_EVENT = "mustmake:smart-camera-mode-change";
 
-export function getCameraMirrorPreferenceKey() {
+function getPreferenceUserKey() {
     let user = null;
 
     try {
@@ -15,7 +17,15 @@ export function getCameraMirrorPreferenceKey() {
         ? "guest"
         : String(identity).trim().toLowerCase();
 
-    return `${CAMERA_MIRROR_KEY_PREFIX}${encodeURIComponent(userKey)}`;
+    return encodeURIComponent(userKey);
+}
+
+export function getCameraMirrorPreferenceKey() {
+    return `${CAMERA_MIRROR_KEY_PREFIX}${getPreferenceUserKey()}`;
+}
+
+export function getSmartCameraModePreferenceKey() {
+    return `${SMART_CAMERA_MODE_KEY_PREFIX}${getPreferenceUserKey()}`;
 }
 
 export function getCameraMirrorPreference() {
@@ -46,4 +56,35 @@ export function setCameraMirrorPreference(mirrored) {
     return true;
 }
 
-export { CAMERA_PREFERENCE_CHANGE_EVENT };
+export function getSmartCameraModePreference() {
+    try {
+        return localStorage.getItem(getSmartCameraModePreferenceKey()) === "true";
+    } catch {
+        return false;
+    }
+}
+
+export function setSmartCameraModePreference(enabled) {
+    const value = Boolean(enabled);
+
+    try {
+        localStorage.setItem(
+            getSmartCameraModePreferenceKey(),
+            String(value)
+        );
+    } catch (error) {
+        console.warn("Could not save the smart camera preference.", error);
+        return false;
+    }
+
+    window.dispatchEvent(new CustomEvent(SMART_CAMERA_MODE_CHANGE_EVENT, {
+        detail: { enabled: value }
+    }));
+
+    return true;
+}
+
+export {
+    CAMERA_PREFERENCE_CHANGE_EVENT,
+    SMART_CAMERA_MODE_CHANGE_EVENT
+};
