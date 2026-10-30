@@ -5,9 +5,9 @@ const OTP_COOLDOWN_MS = 60 * 1000;
 const loginLink = document.getElementById("loginLink");
 const signupForm = document.getElementById("signupForm");
 const signupOtpForm = document.getElementById("signupOtpForm");
-const signupMessage = document.getElementById("signupMessage");
 const signupResend = document.getElementById("signupResend");
 const resendStatus = document.getElementById("signupResendStatus");
+let signupToast = null;
 
 if (loginLink) {
     loginLink.addEventListener("click", (event) => {
@@ -42,6 +42,7 @@ async function postAuth(path, payload) {
 }
 
 function saveSession(data) {
+    signupToast?.dismiss();
     window.saveAuthenticatedSession(data.token, data.user);
     sessionStorage.removeItem(SIGNUP_EMAIL_KEY);
     sessionStorage.removeItem(SIGNUP_SENT_AT_KEY);
@@ -90,17 +91,28 @@ function updateResendCooldown() {
 }
 
 function setSignupMessage(message, isError = false) {
-    const emailAlreadyRegistered = /email already registered/i.test(message);
+    if (!message) {
+        signupToast?.dismiss();
+        signupToast = null;
+        return;
+    }
 
-    signupMessage.textContent = message;
-    signupMessage.classList.toggle(
-        "auth-message-error",
-        isError && !emailAlreadyRegistered
-    );
-    signupMessage.classList.toggle(
-        "auth-message-success",
-        emailAlreadyRegistered
-    );
+    const type = isError
+        ? "error"
+        : /^(sending|verifying)/i.test(message)
+            ? "loading"
+            : /sent|verified|success/i.test(message)
+                ? "success"
+                : "info";
+
+    if (
+        signupToast?.element.isConnected &&
+        !signupToast.element.classList.contains("is-leaving")
+    ) {
+        signupToast.update(message, { type });
+    } else {
+        signupToast = window.showToast(message, { type });
+    }
 }
 
 function returnToSignup(message, isError = true) {

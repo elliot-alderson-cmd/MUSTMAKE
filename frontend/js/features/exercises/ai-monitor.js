@@ -144,7 +144,6 @@ export function mountAiMonitor(
     const correctionError = root.querySelector("#monitorCorrectionError");
     const saveButton = root.querySelector("#monitorSave");
     const discardButton = root.querySelector("#monitorDiscard");
-    const saveMessage = root.querySelector("#monitorSaveMessage");
 
     const context = canvas.getContext("2d");
     const detector = createExerciseDetector(exercise.slug);
@@ -784,7 +783,6 @@ export function mountAiMonitor(
 
         correction.value = String(reviewValue);
         correctionError.textContent = "";
-        saveMessage.textContent = "";
 
         setFeedback(
             isPlank
@@ -830,7 +828,6 @@ export function mountAiMonitor(
         summary.hidden = true;
         correction.value = "0";
         correctionError.textContent = "";
-        saveMessage.textContent = "";
 
         onWorkoutSaved?.();
 
@@ -924,28 +921,24 @@ export function mountAiMonitor(
 
         if (!token) {
             if (!onSignInRequired?.(payload)) {
-                saveMessage.textContent =
-                    "Could not preserve this workout. Please try again before signing in.";
+                window.showToast(
+                    "Could not preserve this workout. Please try again before signing in.",
+                    { type: "error" }
+                );
                 return;
             }
 
-            saveMessage.textContent =
-                "Please sign in to save this workout.";
-
-            const link = document.createElement("a");
-            link.href = "/login";
-            link.textContent = " Sign in";
-
-            saveMessage.append(link);
+            window.showToast("Please sign in to save this workout.", {
+                type: "info",
+                action: { label: "Sign in", href: "/login" }
+            });
             return;
         }
 
         saveInFlight = true;
 
         setStatus("saving", "Saving reviewed workout…");
-
-        saveMessage.textContent =
-            "Saving your reviewed workout…";
+        const saveToast = window.showToast("Saving your reviewed workout…", { type: "loading" });
 
         try {
             const response = await fetch(
@@ -967,8 +960,10 @@ export function mountAiMonitor(
                 localStorage.removeItem("user");
 
                 if (!onSignInRequired?.(payload)) {
-                    saveMessage.textContent =
-                        "Your sign-in expired, and this workout could not be preserved. Retry before signing in.";
+                    saveToast?.update(
+                        "Your sign-in expired, and this workout could not be preserved. Retry before signing in.",
+                        { type: "error" }
+                    );
 
                     setStatus(
                         "finished",
@@ -978,14 +973,10 @@ export function mountAiMonitor(
                     return;
                 }
 
-                saveMessage.textContent =
-                    "Your sign-in expired. Sign in again; this reviewed session has not been discarded.";
-
-                const link = document.createElement("a");
-                link.href = "/login";
-                link.textContent = " Sign in";
-
-                saveMessage.append(link);
+                saveToast?.update(
+                    "Your sign-in expired. Sign in again; this reviewed session has not been discarded.",
+                    { type: "warning", action: { label: "Sign in", href: "/login" } }
+                );
 
                 setStatus(
                     "finished",
@@ -1038,31 +1029,22 @@ export function mountAiMonitor(
             window.clearPrivateCaches?.();
             onWorkoutSaved?.();
 
-            saveMessage.textContent =
-                "Workout saved successfully. ";
-
-            const todayLink = document.createElement("a");
-            todayLink.href = "/today";
-            todayLink.textContent = "View today";
-
-            const historyLink = document.createElement("a");
-            historyLink.href = "/history";
-            historyLink.textContent = "Open history";
-
-            saveMessage.append(
-                todayLink,
-                document.createTextNode(" or "),
-                historyLink,
-                document.createTextNode(".")
-            );
+            saveToast?.update("Workout saved successfully.", {
+                type: "success",
+                actions: [
+                    { label: "View today", href: "/today" },
+                    { label: "Open history", href: "/history" }
+                ]
+            });
 
             setStatus("saved", "Workout saved.");
         } catch (error) {
             console.error("AI workout save error:", error);
 
-            saveMessage.textContent =
-                error.message ||
-                "Could not connect to the server. Your reviewed session is still available to retry.";
+            saveToast?.update(
+                error.message || "Could not connect to the server. Your reviewed session is still available to retry.",
+                { type: "error" }
+            );
 
             setStatus(
                 "finished",
@@ -1236,8 +1218,13 @@ export function mountAiMonitor(
         summary.hidden = false;
 
         if (snapshot.saved) {
-            saveMessage.textContent =
-                "Workout saved successfully.";
+            window.showToast("Workout saved successfully.", {
+                type: "success",
+                actions: [
+                    { label: "View today", href: "/today" },
+                    { label: "Open history", href: "/history" }
+                ]
+            });
 
             setStatus("saved", "Workout saved.");
         } else {
@@ -1287,8 +1274,9 @@ export function mountAiMonitor(
 
         sessionStarted = true;
 
-        saveMessage.textContent =
-            "You're signed in. Review your workout and save it again.";
+        window.showToast("You're signed in. Review your workout and save it again.", {
+            type: "info"
+        });
 
         setStatus("finished", "Workout ready to save.");
     } else if (snapshot) {

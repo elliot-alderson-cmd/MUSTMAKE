@@ -4,8 +4,6 @@ const OTP_COOLDOWN_MS = 60 * 1000;
 
 const loginForm = document.getElementById("loginForm");
 const otpLoginVerifyForm = document.getElementById("otpLoginVerifyForm");
-const loginMessage = document.getElementById("loginMessage");
-const otpLoginStatus = document.getElementById("otpLoginStatus");
 const loginIdentifier = document.getElementById("login");
 const loginLabel = document.getElementById("loginLabel");
 const loginPassword = document.getElementById("password");
@@ -14,43 +12,22 @@ const passwordLabel = document.getElementById("passwordLabel");
 const loginSubmitButton = document.getElementById("loginSubmitButton");
 const loginModeButtons = document.querySelectorAll("[data-login-mode]");
 let loginMode = "password";
-let loginMessageTimer = null;
+let loginRequestToast = null;
+let otpRequestToast = null;
 
-function clearLoginMessageAnimation() {
-    if (loginMessageTimer) {
-        clearTimeout(loginMessageTimer);
-        loginMessageTimer = null;
+function setLoginToast(message, type = "info") {
+    if (
+        loginRequestToast?.element.isConnected &&
+        !loginRequestToast.element.classList.contains("is-leaving")
+    ) {
+        loginRequestToast.update(message, { type });
+    } else {
+        loginRequestToast = window.showToast(message, { type });
     }
-
-    loginMessage.classList.remove(
-        "auth-message-invalid",
-        "auth-message-email-missing",
-        "auth-message-error",
-        "auth-message-pop"
-    );
-    loginMessage.style.removeProperty("color");
-}
-
-function showAnimatedLoginMessage(message, stateClass, color) {
-    clearLoginMessageAnimation();
-    loginMessage.textContent = message;
-    loginMessage.classList.add(stateClass);
-    loginMessage.style.color = color;
-    void loginMessage.offsetWidth;
-    loginMessage.classList.add("auth-message-pop");
-
-    loginMessageTimer = window.setTimeout(() => {
-        loginMessage.textContent = "";
-        clearLoginMessageAnimation();
-    }, 2600);
 }
 
 function showInvalidCredentialsMessage() {
-    showAnimatedLoginMessage(
-        "Invalid username/email or password.",
-        "auth-message-invalid",
-        "#ff3b3b"
-    );
+    setLoginToast("Invalid username/email or password.", "error");
 }
 
 window.addEventListener("storage", (event) => {
@@ -132,9 +109,8 @@ function setLoginMode(mode) {
     loginMode = mode;
     const usingOtp = mode === "otp";
 
-    otpLoginStatus.classList.remove("auth-message-error");
-    otpLoginStatus.textContent = "";
-    otpLoginStatus.hidden = true;
+    otpRequestToast?.dismiss();
+    otpRequestToast = null;
 
     loginIdentifier.type = usingOtp ? "email" : "text";
     loginIdentifier.autocomplete = usingOtp ? "email" : "username";
@@ -156,14 +132,33 @@ function setLoginMode(mode) {
 }
 
 function setOtpStatus(message, isError = false) {
-    otpLoginStatus.textContent = message;
-    otpLoginStatus.hidden = !message;
-    otpLoginStatus.classList.toggle("auth-message-error", isError);
-    loginMessage.textContent = "";
-    loginMessage.classList.remove("auth-message-error");
+    if (!message) {
+        otpRequestToast?.dismiss();
+        otpRequestToast = null;
+        return;
+    }
+
+    const type = isError
+        ? "error"
+        : /^(verifying|sending)/i.test(message)
+            ? "loading"
+            : /sent|verified/i.test(message)
+                ? "success"
+                : "info";
+
+    if (
+        otpRequestToast?.element.isConnected &&
+        !otpRequestToast.element.classList.contains("is-leaving")
+    ) {
+        otpRequestToast.update(message, { type });
+    } else {
+        otpRequestToast = window.showToast(message, { type });
+    }
 }
 
 function finishLogin(data) {
+    loginRequestToast?.dismiss();
+    otpRequestToast?.dismiss();
     window.saveAuthenticatedSession(data.token, data.user);
     sessionStorage.removeItem(LOGIN_EMAIL_KEY);
     sessionStorage.removeItem(LOGIN_SENT_AT_KEY);
@@ -228,8 +223,7 @@ function resetOtpLogin(message, email = "", isError = false) {
     setLoginMode("otp");
     loginIdentifier.value = email;
     loginIdentifier.focus();
-    loginMessage.textContent = message;
-    loginMessage.classList.toggle("auth-message-error", isError);
+    setOtpStatus(message, isError);
 }
 
 if (loginForm) {
@@ -241,7 +235,6 @@ if (loginForm) {
                 setLoginMode(nextMode);
                 loginIdentifier.focus();
             }
-            loginMessage.textContent = "";
         });
     });
 
@@ -254,7 +247,6 @@ if (loginForm) {
             storedOtpEmail,
             Number(sessionStorage.getItem(LOGIN_SENT_AT_KEY)) || 0
         );
-        loginMessage.textContent = "";
     }
 
     loginForm.addEventListener("submit", async (event) => {
@@ -265,15 +257,14 @@ if (loginForm) {
 
         if (loginMode === "otp") {
             const email = login.toLowerCase();
-            clearLoginMessageAnimation();
-            loginMessage.textContent = "Sending sign-in code...";
+            setLoginToast("Sending sign-in code...", "loading");
             submitButton.disabled = true;
 
             try {
                 await postAuth("/api/auth/send-otp", { email, purpose: "login" });
                 loginIdentifier.value = email;
                 showOtpVerify(email);
-                loginMessage.textContent = "";
+                setLoginToast("Sign-in code sent.", "success");
                 setOtpStatus("");
             } catch (error) {
                 console.error(error);
@@ -282,14 +273,9 @@ if (loginForm) {
                     : error.message || "Could not send a sign-in code.";
 
                 if (/no account exists with this email/i.test(errorMessage)) {
-                    showAnimatedLoginMessage(
-                        errorMessage,
-                        "auth-message-email-missing",
-                        "#fbbf24"
-                    );
+                    setLoginToast(errorMessage, "warning");
                 } else {
-                    loginMessage.textContent = errorMessage;
-                    loginMessage.classList.add("auth-message-error");
+                    setLoginToast(errorMessage, "error");
                 }
             } finally {
                 submitButton.disabled = false;
@@ -299,13 +285,11 @@ if (loginForm) {
         }
 
         const password = loginPassword.value;
-        clearLoginMessageAnimation();
-        loginMessage.textContent = "Logging in...";
+        setLoginToast("Logging in...", "loading");
         submitButton.disabled = true;
 
         try {
             const data = await postAuth("/api/auth/login", { login, password });
-            loginMessage.textContent = "Login successful!";
             finishLogin(data);
         } catch (error) {
             console.error(error);
@@ -316,8 +300,7 @@ if (loginForm) {
             if (/invalid username\/email or password/i.test(errorMessage)) {
                 showInvalidCredentialsMessage();
             } else {
-                loginMessage.textContent = errorMessage;
-                loginMessage.classList.add("auth-message-error");
+                setLoginToast(errorMessage, "error");
             }
         } finally {
             submitButton.disabled = false;

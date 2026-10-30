@@ -185,7 +185,13 @@ async function loadToday() {
     } catch (error) {
         console.error("Today's workouts error:", error);
         if (!Array.isArray(cachedWorkouts)) {
-            userContainer.innerHTML = 'Your workout data could not be loaded. You can still browse the <a href="/pages/gst.html">guest page</a>.';
+            userContainer.replaceChildren();
+            window.showToast("Your workout data could not be loaded.", {
+                type: "error",
+                action: { label: "Browse exercises", href: "/pages/gst.html" }
+            });
+        } else {
+            window.showToast("Could not refresh your workout data. Showing saved data.", { type: "warning" });
         }
     }
 }
@@ -296,6 +302,9 @@ async function loadHistory(cursor = null) {
     }
 
     historyLoading = true;
+    const loadToast = cursor
+        ? window.showToast("Loading older workouts…", { type: "loading" })
+        : null;
     const query = new URLSearchParams({ limit: "25" });
     if (cursor) query.set("cursor", cursor);
 
@@ -307,6 +316,7 @@ async function loadHistory(cursor = null) {
         });
 
         if (response.status === 401) {
+            loadToast?.dismiss();
             logout();
             return;
         }
@@ -328,15 +338,22 @@ async function loadHistory(cursor = null) {
         historyWorkouts.push(...page.workouts);
         historyCursor = page.nextCursor || null;
         renderHistory(historyContainer);
+        loadToast?.dismiss();
     } catch (error) {
         console.error(error);
         if (historyWorkouts.length === 0) {
-            historyContainer.innerHTML = `<p class="no-workout">Could not load history.</p>`;
+            historyContainer.replaceChildren();
+            if (loadToast?.element.isConnected) {
+                loadToast.update(error.message || "Could not load workout history.", { type: "error" });
+            } else {
+                window.showToast(error.message || "Could not load workout history.", { type: "error" });
+            }
         } else {
-            const loadError = document.createElement("p");
-            loadError.className = "no-workout";
-            loadError.textContent = "Could not load older workouts.";
-            historyContainer.appendChild(loadError);
+            if (loadToast?.element.isConnected) {
+                loadToast.update(error.message || "Could not load older workouts.", { type: "error" });
+            } else {
+                window.showToast(error.message || "Could not load older workouts.", { type: "error" });
+            }
         }
     } finally {
         historyLoading = false;

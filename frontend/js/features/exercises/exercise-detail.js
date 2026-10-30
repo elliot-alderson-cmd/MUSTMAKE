@@ -144,7 +144,6 @@
                     <div class="exercise-form-grid">
                         ${exercise.fields.map(field => renderField(field, exercise)).join("")}
                     </div>
-                    <p id="exerciseFormMessage" class="exercise-form-message" role="status" aria-live="polite"></p>
                     <button class="main-button exercise-done-button" type="submit">Done</button>
                 </form>
             </div>
@@ -235,8 +234,6 @@
                         >
                         <p id="monitorCorrectionError" class="exercise-form-message" role="alert"></p>
                     </div>
-
-                    <p id="monitorSaveMessage" class="exercise-form-message" role="status" aria-live="polite"></p>
 
                     <div class="monitor-review-controls">
                         <button id="monitorSave" class="main-button monitor-save" type="button" disabled>Save Workout</button>
@@ -513,7 +510,6 @@
         const form = root.querySelector("#manualWorkoutForm");
         if (!form) return;
 
-        const message = root.querySelector("#exerciseFormMessage");
         if (pendingWorkout?.mode === "manual") {
             exercise.fields.forEach(field => {
                 const input = form.elements.namedItem(field.name);
@@ -521,7 +517,7 @@
                     input.value = pendingWorkout.payload[field.name];
                 }
             });
-            message.textContent = "You're signed in. Your workout is ready to save again.";
+            window.showToast("You're signed in. Your workout is ready to save again.", { type: "info" });
         }
 
         form.addEventListener("submit", async event => {
@@ -533,17 +529,18 @@
             if (!token) {
                 const values = Object.fromEntries(new FormData(form).entries());
                 if (!storePendingWorkout("manual", values)) {
-                    message.textContent = "Could not preserve your workout. Please try again before signing in.";
+                    window.showToast("Could not preserve your workout. Please try again before signing in.", { type: "error" });
                     return;
                 }
-                message.innerHTML =
-                    'Please <a href="/login">sign in</a> to save your workout.';
+                window.showToast("Please sign in to save your workout.", {
+                    type: "info",
+                    action: { label: "Sign in", href: "/login" }
+                });
                 return;
             }
 
             button.disabled = true;
-            button.textContent = "Saving…";
-            message.textContent = "Saving your workout…";
+            const saveToast = window.showToast("Saving your workout…", { type: "loading" });
 
             try {
                 const response = await fetch(
@@ -571,34 +568,40 @@
                         "manual",
                         Object.fromEntries(new FormData(form).entries())
                     )) {
-                        message.textContent = "Your sign-in expired, and your workout could not be preserved. Please retry before signing in.";
+                        saveToast?.update("Your sign-in expired, and your workout could not be preserved. Please retry before signing in.", { type: "error" });
                         return;
                     }
-                    message.innerHTML =
-                        'Your session expired. Please <a href="/login">sign in</a> again.';
+                    saveToast?.update("Your session expired. Sign in again to save this workout.", {
+                        type: "warning",
+                        action: { label: "Sign in", href: "/login" }
+                    });
                     return;
                 }
 
                 if (!response.ok) {
-                    message.textContent =
-                        data.message ||
-                        "Could not save this workout. Check the values and try again.";
+                    saveToast?.update(
+                        data.message || "Could not save this workout. Check the values and try again.",
+                        { type: "error" }
+                    );
                     return;
                 }
 
                 clearPendingWorkout();
                 form.reset();
 
-                message.innerHTML =
-                    'Workout saved. <a href="/today">View today</a> or <a href="/history">open history</a>.';
+                saveToast?.update("Workout saved.", {
+                    type: "success",
+                    actions: [
+                        { label: "View today", href: "/today" },
+                        { label: "Open history", href: "/history" }
+                    ]
+                });
             } catch (error) {
                 console.error("Save workout error:", error);
 
-                message.textContent =
-                    "Could not connect to the server. Please try again.";
+                saveToast?.update("Could not connect to the server. Please try again.", { type: "error" });
             } finally {
                 button.disabled = false;
-                button.textContent = "Done";
             }
         });
     }
@@ -688,11 +691,11 @@
             render(exercise);
         } catch (error) {
             console.error("Exercise detail error:", error);
-
-            root.innerHTML = `
-                <a class="exercise-back-link" href="/today">&larr; Back to exercises</a>
-                <p class="no-workout">${escapeHTML(error.message || "This exercise could not be loaded.")}</p>
-            `;
+            root.innerHTML = '<a class="exercise-back-link" href="/today">&larr; Back to exercises</a>';
+            window.showToast(error.message || "This exercise could not be loaded.", {
+                type: "error",
+                action: { label: "Back to exercises", href: "/today" }
+            });
         }
     }
 

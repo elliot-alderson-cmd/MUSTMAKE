@@ -1,3 +1,7 @@
+const callbackToast = window.showToast("Completing Google sign-in…", {
+    type: "loading"
+});
+
 try {
     const callbackData = window.location.hash.slice(1) || window.location.search.slice(1);
     const params = new URLSearchParams(callbackData);
@@ -29,7 +33,7 @@ try {
 } catch (error) {
     window.history.replaceState(null, "", window.location.pathname);
     console.error(error);
-
-    document.getElementById("callbackMessage").textContent =
-        "Google login failed. Please try again.";
+    callbackToast?.update("Google login failed. Please try again.", {
+        type: "error"
+    });
 }

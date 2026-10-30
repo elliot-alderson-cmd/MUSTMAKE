@@ -63,13 +63,13 @@ profilePictureInput?.addEventListener("change", () => {
 
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
-        alert("Please select a JPG, PNG or WebP image.");
+        window.showToast("Please select a JPG, PNG or WebP image.", { type: "warning" });
         profilePictureInput.value = "";
         return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-        alert("Profile photo must be smaller than 2 MB.");
+        window.showToast("Profile photo must be smaller than 2 MB.", { type: "warning" });
         profilePictureInput.value = "";
         return;
     }
@@ -130,7 +130,7 @@ async function loadProfile() {
         }
     } catch (error) {
         console.error(error);
-        document.getElementById("profileMessage").textContent = error.message;
+        window.showToast(error.message || "Could not load profile.", { type: "error" });
     }
 }
 
@@ -139,8 +139,7 @@ const profileForm = document.getElementById("profileForm");
 profileForm.addEventListener("submit", async event => {
     event.preventDefault();
 
-    const message = document.getElementById("profileMessage");
-    message.textContent = "Saving...";
+    const saveToast = window.showToast("Saving profile…", { type: "loading" });
 
     try {
         const payload = {
@@ -192,14 +191,15 @@ profileForm.addEventListener("submit", async event => {
         }
 
         localStorage.setItem("user", JSON.stringify(data.user));
-        message.textContent = "Profile saved successfully.";
+        saveToast?.dismiss();
+        window.queueToast("Profile saved successfully.", "success");
 
         setTimeout(() => {
             window.location.href = "/today";
         }, 700);
     } catch (error) {
         console.error(error);
-        message.textContent = error.message;
+        saveToast?.update(error.message || "Could not save profile.", { type: "error" });
     }
 });
 

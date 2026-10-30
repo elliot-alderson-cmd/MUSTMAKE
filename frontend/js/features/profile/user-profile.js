@@ -125,7 +125,7 @@ async function loadMorePublicHistory(event) {
     const button = event.currentTarget;
     publicHistoryLoading = true;
     button.disabled = true;
-    button.textContent = "Loading workouts...";
+    const loadToast = window.showToast("Loading older workouts…", { type: "loading" });
 
     try {
         const query = new URLSearchParams({
@@ -138,6 +138,7 @@ async function loadMorePublicHistory(event) {
         );
 
         if (response.status === 401) {
+            loadToast?.dismiss();
             window.clearPrivateCaches();
             localStorage.removeItem("token");
             localStorage.removeItem("user");
@@ -153,10 +154,12 @@ async function loadMorePublicHistory(event) {
         const list = profileRoot.querySelector(".public-workout-list");
         appendPublicWorkouts(list, data.workoutHistory);
         setPublicHistoryCursor(list, data.workoutHistoryNextCursor);
+        loadToast?.dismiss();
     } catch (error) {
         console.error("Public workout history error:", error);
         button.disabled = false;
-        button.textContent = "Could not load older workouts. Retry";
+        button.textContent = "Load older workouts";
+        loadToast?.update(error.message || "Could not load older workouts.", { type: "error" });
     } finally {
         publicHistoryLoading = false;
     }
@@ -257,7 +260,7 @@ async function loadPublicProfile() {
         return;
     }
     if (!profileId) {
-        profileRoot.textContent = "Invalid profile.";
+        window.showToast("This profile could not be found.", { type: "error" });
         return;
     }
 
@@ -277,7 +280,8 @@ async function loadPublicProfile() {
         displayProfile(data);
     } catch (error) {
         console.error("Public profile error:", error);
-        profileRoot.textContent = error.message || "Could not load profile.";
+        profileRoot.replaceChildren();
+        window.showToast(error.message || "Could not load profile.", { type: "error" });
     }
 }
 

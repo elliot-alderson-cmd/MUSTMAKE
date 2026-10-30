@@ -5493,16 +5493,6 @@ body.app-page .exercise-library-page .exercise-card-media {
     box-shadow: none;
 }
 
-#loginMessage.auth-message {
-    min-height: 0;
-    margin: 0;
-}
-
-#signupMessage.auth-message {
-    min-height: 0;
-    margin: 0;
-}
-
 #signupResendStatus,
 #loginOtpResendStatus {
     min-height: 0;
@@ -5511,67 +5501,7 @@ body.app-page .exercise-library-page .exercise-card-media {
     text-align: center;
 }
 
-#loginMessage:not(:empty),
-#otpLoginStatus:not([hidden]),
-#signupMessage:not(:empty) {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    z-index: 1200;
-    width: min(calc(100% - 2rem), 34rem);
-    margin: 0;
-    padding: 0;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    pointer-events: none;
-}
-
-#loginMessage.auth-message-invalid {
-    color: #ff3b3b;
-}
-
 .auth-footer #signupLink,
 .auth-footer #loginLink {
     color: #60a5fa !important;
-}
-
-#loginMessage.auth-message-email-missing {
-    color: #fbbf24;
-}
-
-#loginMessage.auth-message-error,
-#otpLoginStatus.auth-message-error,
-#signupMessage.auth-message-error {
-    color: #ff3b3b !important;
-}
-
-#signupMessage.auth-message-success {
-    color: #22c55e !important;
-}
-
-#loginMessage.auth-message-pop {
-    animation: login-error-message-pop 2.6s ease both;
-}
-
-@keyframes login-error-message-pop {
-    0% {
-        opacity: 0;
-        transform: translate(-50%, -50%) translateY(-7px) scale(0.96);
-    }
-    14%, 76% {
-        opacity: 1;
-        transform: translate(-50%, -50%) translateY(0) scale(1);
-    }
-    100% {
-        opacity: 0;
-        transform: translate(-50%, -50%) translateY(-4px) scale(0.98);
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    #loginMessage.auth-message-pop {
-        animation: none;
-        opacity: 1;
-        transform: translate(-50%, -50%);
-    }
 }

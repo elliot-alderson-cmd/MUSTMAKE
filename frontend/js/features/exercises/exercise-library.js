@@ -140,7 +140,8 @@
             observeVideos();
         } catch (error) {
             console.error("Exercise library error:", error);
-            grid.innerHTML = '<p class="no-workout">The exercise library could not be loaded.</p>';
+            grid.replaceChildren();
+            window.showToast("The exercise library could not be loaded.", { type: "error" });
         }
     }
 

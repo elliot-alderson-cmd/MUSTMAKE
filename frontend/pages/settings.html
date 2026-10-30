@@ -13,6 +13,7 @@
     <script src="/js/shared/theme.js"></script>
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/settings.css">
+    <link rel="stylesheet" href="/assets/css/toast.css">
 </head>
 <body class="settings-page">
     <div id="navbar"></div>
@@ -29,17 +30,15 @@
             </label>
         </section>
 
-        <p id="cameraSettingStatus" class="settings-status" role="status" aria-live="polite"></p>
-
         <section id="dangerZone" class="settings-danger-zone" hidden aria-labelledby="dangerZoneTitle">
             <h2 id="dangerZoneTitle">Danger zone</h2>
             <button id="deleteAccountButton" class="settings-delete-button" type="button">
                 Delete account
             </button>
-            <p id="deleteAccountStatus" class="settings-delete-status" role="status" aria-live="polite"></p>
         </section>
     </main>
 
+    <script src="/js/shared/toast.js"></script>
     <script src="/js/shared/navbar.js"></script>
     <script type="module" src="/js/features/exercises/settings.js"></script>
 </body>

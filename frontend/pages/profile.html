@@ -14,6 +14,7 @@
     <script src="/js/shared/theme.js"></script>
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/profiles.css">
+    <link rel="stylesheet" href="/assets/css/toast.css">
 </head>
 
 <body>
@@ -82,7 +83,6 @@
                 </button>
             </div>
             <input type="file" id="profilePhotoInput" accept="image/jpeg,image/png,image/webp" hidden>
-            <p id="profilePhotoMessage" class="profile-interaction-message" role="status" aria-live="polite"></p>
             <div class="profile-interaction-actions">
                 <button type="button" id="saveProfilePhoto" class="main-button" disabled>Save</button>
             </div>
@@ -94,7 +94,6 @@
             <h2 id="socialDialogTitle">Social links</h2>
             <div id="savedSocialLinks" class="saved-social-links" aria-label="Saved social links"></div>
             <input type="url" id="socialUrlInput" inputmode="url" autocomplete="url" placeholder="https://…">
-            <p id="socialDialogMessage" class="profile-interaction-message" role="status" aria-live="polite"></p>
             <div class="profile-interaction-actions">
                 <button type="button" id="saveProfileSocial" class="main-button">Add link</button>
             </div>
@@ -106,13 +105,13 @@
             <h2 id="profileValueDialogTitle">Change name</h2>
             <input id="profileValueInput" type="text" autocomplete="name" maxlength="100" required aria-label="Name">
             <p id="profileValueHint" class="profile-value-hint" hidden>Age increments every January.</p>
-            <p id="profileValueMessage" class="profile-interaction-message" role="status" aria-live="polite"></p>
             <div class="profile-interaction-actions">
                 <button type="button" id="saveProfileValue" class="main-button">Change</button>
             </div>
         </section>
     </div>
 
+    <script src="/js/shared/toast.js"></script>
     <script src="/js/shared/navbar.js"></script>
     <script src="/js/features/workouts/script.js"></script>
     <script src="/js/features/profile/profile.js"></script>

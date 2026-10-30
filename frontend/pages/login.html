@@ -15,6 +15,7 @@
 
     <script src="/js/shared/theme.js"></script>
     <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="stylesheet" href="/assets/css/toast.css">
 </head>
 
 <body>
@@ -23,19 +24,6 @@
     <main class="auth-container">
 
         <div class="auth-content">
-            <p
-                id="loginMessage"
-                class="auth-message"
-                role="status"
-                aria-live="polite"
-            ></p>
-            <p
-                id="otpLoginStatus"
-                class="auth-message otp-login-status"
-                role="status"
-                aria-live="polite"
-                hidden
-            ></p>
             <form id="loginForm">
 
                 <div class="form-group">
@@ -169,6 +157,7 @@
 
     </main>
 
+    <script src="/js/shared/toast.js"></script>
     <script src="/js/shared/navbar.js"></script>
     <script src="/js/shared/auth-redirect.js"></script>
     <script src="/js/shared/password-visibility.js"></script>

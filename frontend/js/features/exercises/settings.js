@@ -4,10 +4,8 @@ import {
 } from "./camera-preference.js";
 
 const toggle = document.getElementById("cameraMirrorToggle");
-const status = document.getElementById("cameraSettingStatus");
 const dangerZone = document.getElementById("dangerZone");
 const deleteAccountButton = document.getElementById("deleteAccountButton");
-const deleteAccountStatus = document.getElementById("deleteAccountStatus");
 
 function hasSignedInUser() {
     try {
@@ -31,7 +29,10 @@ toggle.addEventListener("change", () => {
         toggle.checked = getCameraMirrorPreference();
     }
 
-    status.textContent = saved ? "Saved." : "Could not save.";
+    window.showToast(
+        saved ? "Camera preference saved." : "Could not save camera preference.",
+        { type: saved ? "success" : "error" }
+    );
 });
 
 deleteAccountButton.addEventListener("click", async () => {
@@ -41,7 +42,7 @@ deleteAccountButton.addEventListener("click", async () => {
     if (!confirmed) return;
 
     deleteAccountButton.disabled = true;
-    deleteAccountStatus.textContent = "Deleting account…";
+    const deleteToast = window.showToast("Deleting account…", { type: "loading" });
 
     try {
         const response = await fetch(`${window.API_URL}/api/account`, {
@@ -53,6 +54,7 @@ deleteAccountButton.addEventListener("click", async () => {
         const data = await response.json().catch(() => ({}));
 
         if (response.status === 401) {
+            deleteToast?.dismiss();
             window.clearPrivateCaches();
             localStorage.removeItem("token");
             localStorage.removeItem("user");
@@ -66,13 +68,14 @@ deleteAccountButton.addEventListener("click", async () => {
         window.clearPrivateCaches();
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        deleteAccountStatus.textContent = "Account deleted. Redirecting…";
+        deleteToast?.dismiss();
+        window.queueToast("Account deleted successfully.", "success");
         window.setTimeout(() => window.location.replace("/blog"), 600);
     } catch (error) {
         console.error("Account deletion error:", error);
-        deleteAccountStatus.textContent = error instanceof TypeError
+        deleteToast?.update(error instanceof TypeError
             ? "Could not reach the server. Please try again."
-            : error.message || "Could not delete your account.";
+            : error.message || "Could not delete your account.", { type: "error" });
         deleteAccountButton.disabled = false;
     }
 });

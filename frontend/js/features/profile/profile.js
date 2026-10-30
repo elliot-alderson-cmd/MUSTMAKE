@@ -135,8 +135,7 @@ async function loadProfile() {
     } catch (error) {
         console.error(error);
         if (!cachedProfile) {
-            document.getElementById("profileNameEdit").textContent =
-                "Could not load profile.";
+            window.showToast(error.message || "Could not load profile.", { type: "error" });
         }
     }
 }
@@ -234,7 +233,6 @@ const profileValueDialog = document.getElementById("profileValueDialog");
 const profileValueDialogTitle = document.getElementById("profileValueDialogTitle");
 const profileValueInput = document.getElementById("profileValueInput");
 const profileValueHint = document.getElementById("profileValueHint");
-const profileValueMessage = document.getElementById("profileValueMessage");
 const saveProfileValueButton = document.getElementById("saveProfileValue");
 let activeProfileValue = null;
 let activeProfileValueTrigger = null;
@@ -243,7 +241,6 @@ let profileValueSaving = false;
 function closeProfileValueDialog() {
     if (profileValueSaving) return;
     profileValueDialog.hidden = true;
-    profileValueMessage.textContent = "";
     activeProfileValueTrigger?.focus();
     activeProfileValue = null;
     activeProfileValueTrigger = null;
@@ -256,14 +253,15 @@ async function saveProfileValue() {
 
     profileValueSaving = true;
     saveProfileValueButton.disabled = true;
-    profileValueMessage.textContent = "Saving…";
+    const saveToast = window.showToast("Saving profile change…", { type: "loading" });
     try {
         await updateProfile({ [activeProfileValue]: value });
         profileValueSaving = false;
+        saveToast?.update("Profile updated successfully.", { type: "success" });
         closeProfileValueDialog();
     } catch (error) {
         console.error(`Profile ${activeProfileValue} update error:`, error);
-        profileValueMessage.textContent = error.message;
+        saveToast?.update(error.message || "Could not update profile.", { type: "error" });
     } finally {
         profileValueSaving = false;
         saveProfileValueButton.disabled = false;
@@ -294,7 +292,6 @@ function openProfileValueDialog(field, trigger) {
     profileValueInput.value = profileData.user[field] ?? "";
     profileValueInput.setCustomValidity("");
     profileValueHint.hidden = field !== "age";
-    profileValueMessage.textContent = "";
     profileValueDialog.hidden = false;
     profileValueInput.focus();
     profileValueInput.select();
@@ -332,7 +329,6 @@ profileValueDialog.addEventListener("click", event => {
 const photoDialog = document.getElementById("profilePhotoDialog");
 const photoInput = document.getElementById("profilePhotoInput");
 const photoPreview = document.getElementById("profilePhotoPreview");
-const photoMessage = document.getElementById("profilePhotoMessage");
 const savePhotoButton = document.getElementById("saveProfilePhoto");
 const photoPreviewHistoryKey = "mustmakeProfilePhotoPreview";
 let selectedPhotoData = "";
@@ -342,7 +338,6 @@ function closePhotoDialog() {
     photoInput.value = "";
     selectedPhotoData = "";
     savePhotoButton.disabled = true;
-    photoMessage.textContent = "";
     document.getElementById("profilePhotoButton").focus();
     if (window.history.state?.[photoPreviewHistoryKey]) {
         window.history.back();
@@ -372,7 +367,7 @@ photoInput.addEventListener("change", () => {
     const file = photoInput.files?.[0];
     if (!file) return;
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-        photoMessage.textContent = "Choose a JPG, PNG or WebP image.";
+        window.showToast("Choose a JPG, PNG or WebP image.", { type: "warning" });
         selectedPhotoData = "";
         savePhotoButton.disabled = true;
         photoPreview.src = document.getElementById("profilePhoto").src;
@@ -380,7 +375,7 @@ photoInput.addEventListener("change", () => {
         return;
     }
     if (file.size > 2 * 1024 * 1024) {
-        photoMessage.textContent = "The photo must be smaller than 2 MB.";
+        window.showToast("The photo must be smaller than 2 MB.", { type: "warning" });
         selectedPhotoData = "";
         savePhotoButton.disabled = true;
         photoPreview.src = document.getElementById("profilePhoto").src;
@@ -391,7 +386,7 @@ photoInput.addEventListener("change", () => {
     const reader = new FileReader();
     reader.onload = () => {
         if (typeof reader.result !== "string") {
-            photoMessage.textContent = "Could not preview this photo.";
+            window.showToast("Could not preview this photo.", { type: "error" });
             selectedPhotoData = "";
             savePhotoButton.disabled = true;
             return;
@@ -399,10 +394,9 @@ photoInput.addEventListener("change", () => {
         selectedPhotoData = reader.result;
         photoPreview.src = selectedPhotoData;
         savePhotoButton.disabled = false;
-        photoMessage.textContent = "";
     };
     reader.onerror = () => {
-        photoMessage.textContent = "Could not preview this photo.";
+        window.showToast("Could not preview this photo.", { type: "error" });
         selectedPhotoData = "";
         savePhotoButton.disabled = true;
     };
@@ -412,20 +406,20 @@ photoInput.addEventListener("change", () => {
 savePhotoButton.addEventListener("click", async () => {
     if (!selectedPhotoData) return;
     savePhotoButton.disabled = true;
-    photoMessage.textContent = "Saving…";
+    const saveToast = window.showToast("Saving profile photo…", { type: "loading" });
     try {
         await updateProfile({ profilePicture: selectedPhotoData });
+        saveToast?.update("Profile photo updated.", { type: "success" });
         closePhotoDialog();
     } catch (error) {
         console.error("Profile photo update error:", error);
-        photoMessage.textContent = error.message;
+        saveToast?.update(error.message || "Could not update profile photo.", { type: "error" });
         savePhotoButton.disabled = false;
     }
 });
 
 const socialDialog = document.getElementById("socialDialog");
 const socialUrlInput = document.getElementById("socialUrlInput");
-const socialMessage = document.getElementById("socialDialogMessage");
 const savedSocialLinks = document.getElementById("savedSocialLinks");
 const socialDialogHistoryKey = "mustmakeSocialDialog";
 let socialDialogBusy = false;
@@ -474,14 +468,14 @@ function renderSavedSocialLinks() {
             });
             document.getElementById("saveProfileSocial").disabled = true;
             socialDialogBusy = true;
-            socialMessage.textContent = "Removing link…";
+            const removeToast = window.showToast("Removing social link…", { type: "loading" });
             try {
                 await updateProfile({ socials: links.filter((_, linkIndex) => linkIndex !== index) });
                 renderSavedSocialLinks();
-                socialMessage.textContent = "Link removed.";
+                removeToast?.update("Social link removed.", { type: "success" });
             } catch (error) {
                 console.error("Social link removal error:", error);
-                socialMessage.textContent = error.message;
+                removeToast?.update(error.message || "Could not remove social link.", { type: "error" });
                 buttons.forEach(button => {
                     button.disabled = false;
                 });
@@ -497,7 +491,6 @@ function renderSavedSocialLinks() {
 
 document.getElementById("addProfileSocial").addEventListener("click", () => {
     socialUrlInput.value = "";
-    socialMessage.textContent = "";
     renderSavedSocialLinks();
     window.history.pushState(
         { ...window.history.state, [socialDialogHistoryKey]: true },
@@ -517,27 +510,28 @@ socialDialog.addEventListener("click", event => {
 document.getElementById("saveProfileSocial").addEventListener("click", async () => {
     const url = safeSocialUrl(socialUrlInput.value.trim());
     if (!url) {
-        socialMessage.textContent = "Enter a valid URL.";
+        window.showToast("Enter a valid URL.", { type: "warning" });
         socialUrlInput.focus();
         return;
     }
 
     const existing = getProfileSocials();
     if (existing.some(value => safeSocialUrl(value) === url)) {
-        socialMessage.textContent = "That link is already on your profile.";
+        window.showToast("That link is already on your profile.", { type: "warning" });
         return;
     }
     if (existing.filter(Boolean).length >= 10) {
-        socialMessage.textContent = "You can add up to 10 social links.";
+        window.showToast("You can add up to 10 social links.", { type: "warning" });
         return;
     }
 
     const saveButton = document.getElementById("saveProfileSocial");
     saveButton.disabled = true;
     socialDialogBusy = true;
-    socialMessage.textContent = "Adding link…";
+    const addToast = window.showToast("Adding social link…", { type: "loading" });
     try {
         await updateProfile({ socials: [...existing.filter(Boolean), url] });
+        addToast?.update("Social link added.", { type: "success" });
         socialDialogBusy = false;
         socialDialog.hidden = true;
         if (window.history.state?.[socialDialogHistoryKey]) {
@@ -550,7 +544,7 @@ document.getElementById("saveProfileSocial").addEventListener("click", async () 
         }
     } catch (error) {
         console.error("Social link update error:", error);
-        socialMessage.textContent = error.message;
+        addToast?.update(error.message || "Could not add social link.", { type: "error" });
     } finally {
         socialDialogBusy = false;
         saveButton.disabled = false;
