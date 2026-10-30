@@ -204,7 +204,7 @@ body {
     font-weight: 500;
     letter-spacing: 0.01em;
     padding: 0;
-    transition: color var(--theme-transition);
+    transition: color var(--ui-transition);
 }
 
 .topbar nav a:hover,

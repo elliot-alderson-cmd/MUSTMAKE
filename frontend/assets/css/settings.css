@@ -116,7 +116,7 @@
     cursor: pointer;
 }
 
-:root[data-theme="dark"] body .settings-delete-button {
+:root body .settings-delete-button {
     color: #ff0000;
 }
 

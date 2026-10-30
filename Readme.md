@@ -65,8 +65,7 @@ MUSTMAKE/
 │       ├── core/change_backend_url.js
 │       ├── shared/
 │       │   ├── auth-redirect.js
-│       │   ├── navbar.js
-│       │   └── theme.js
+│       │   └── navbar.js
 │       └── features/
 │           ├── auth/
 │           │   ├── auth.js

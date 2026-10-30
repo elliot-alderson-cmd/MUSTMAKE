@@ -11,28 +11,28 @@ html {
 }
 
 :root {
-    color-scheme: light;
-    --page-bg: #f8f9fa;
-    --topbar-bg: #ffffff;
-    --glass-panel: #ffffff;
-    --glass-subtle: #f3f4f6;
-    --glass-control: #ffffff;
-    --glass-border: #d1d5db;
-    --text-primary: #111827;
-    --text-secondary: #4b5563;
-    --text-muted: #6b7280;
-    --text-on-accent: #111827;
+    color-scheme: dark;
+    --page-bg: #101010;
+    --topbar-bg: #141414;
+    --glass-panel: #181818;
+    --glass-subtle: #1d1d1d;
+    --glass-control: #141414;
+    --glass-border: #303030;
+    --text-primary: #f2f2f2;
+    --text-secondary: #b8b8b8;
+    --text-muted: #8d8d8d;
+    --text-on-accent: #101010;
     --accent: #ffffff;
     --accent-hover: #ffffff;
-    --accent-soft: rgba(255, 255, 255, 0.1);
+    --accent-soft: rgba(255, 255, 255, 0.12);
     --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --danger: #b42318;
+    --danger: #ff8a80;
     --focus-ring: #ffffff;
-    --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.08);
-    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.055);
+    --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.24);
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.2);
     --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
-    --theme-transition: 320ms ease-in-out;
+    --ui-transition: 320ms ease-in-out;
 }
 
 body {
@@ -128,7 +128,7 @@ a {
     font-weight: 500;
     letter-spacing: 0.01em;
 
-    transition: color var(--theme-transition);
+    transition: color var(--ui-transition);
 }
 
 .topbar nav a:hover,
@@ -147,7 +147,7 @@ a {
 
     padding: 0;
 
-    transition: color var(--theme-transition);
+    transition: color var(--ui-transition);
 }
 
 .topbar nav button:hover {
@@ -1854,10 +1854,10 @@ input,
 select,
 textarea {
     transition:
-        color var(--theme-transition),
-        background-color var(--theme-transition),
-        border-color var(--theme-transition),
-        box-shadow var(--theme-transition),
+        color var(--ui-transition),
+        background-color var(--ui-transition),
+        border-color var(--ui-transition),
+        box-shadow var(--ui-transition),
         transform 240ms var(--ease-premium);
 }
 
@@ -1893,10 +1893,10 @@ textarea {
     border-radius: 50%;
     box-shadow: var(--shadow-soft);
     transition:
-        color var(--theme-transition),
-        background-color var(--theme-transition),
-        border-color var(--theme-transition),
-        box-shadow var(--theme-transition);
+        color var(--ui-transition),
+        background-color var(--ui-transition),
+        border-color var(--ui-transition),
+        box-shadow var(--ui-transition);
 }
 
 .search-trigger:hover {
@@ -2176,12 +2176,12 @@ h4,
 h5,
 h6 {
     transition:
-        color var(--theme-transition),
-        background-color var(--theme-transition),
-        border-color var(--theme-transition),
-        box-shadow var(--theme-transition),
-        fill var(--theme-transition),
-        stroke var(--theme-transition),
+        color var(--ui-transition),
+        background-color var(--ui-transition),
+        border-color var(--ui-transition),
+        box-shadow var(--ui-transition),
+        fill var(--ui-transition),
+        stroke var(--ui-transition),
         transform 240ms var(--ease-premium);
 }
 
@@ -2192,10 +2192,10 @@ h6 {
         opacity 200ms ease,
         transform 260ms var(--ease-premium),
         visibility 0s linear 260ms,
-        color var(--theme-transition),
-        background-color var(--theme-transition),
-        border-color var(--theme-transition),
-        box-shadow var(--theme-transition);
+        color var(--ui-transition),
+        background-color var(--ui-transition),
+        border-color var(--ui-transition),
+        box-shadow var(--ui-transition);
 }
 
 .search-control.is-open .search-overlay {
@@ -2205,10 +2205,10 @@ h6 {
         opacity 200ms ease,
         transform 260ms var(--ease-premium),
         visibility 0s,
-        color var(--theme-transition),
-        background-color var(--theme-transition),
-        border-color var(--theme-transition),
-        box-shadow var(--theme-transition);
+        color var(--ui-transition),
+        background-color var(--ui-transition),
+        border-color var(--ui-transition),
+        box-shadow var(--ui-transition);
 }
 
 .person-top,
@@ -3630,7 +3630,7 @@ body {
     font-weight: 500;
     letter-spacing: 0.01em;
     padding: 0;
-    transition: color var(--theme-transition);
+    transition: color var(--ui-transition);
 }
 
 .topbar nav a:hover,
@@ -4103,7 +4103,7 @@ body.app-page .exercise-library-page .exercise-card h3 {
     .mobile-nav-backdrop { transition-duration: 0.01ms; }
 }
 /* responsive-refinements.css */
-/* Consistent faded-white theme across viewport sizes */
+/* Consistent surface refinements across viewport sizes */
 html,
 body {
     background: var(--page-bg) !important;
@@ -5084,158 +5084,136 @@ body.mobile-nav-open {
     outline: 0;
     box-shadow: 0 1px 0 var(--accent);
 }
-/* theme.css */
-:root[data-theme="dark"] {
-    color-scheme: dark;
-    --page-bg: #101010;
-    --topbar-bg: #141414;
-    --glass-panel: #181818;
-    --glass-subtle: #1d1d1d;
-    --glass-control: #141414;
-    --glass-border: #303030;
-    --text-primary: #f2f2f2;
-    --text-secondary: #b8b8b8;
-    --text-muted: #8d8d8d;
-    --text-on-accent: #101010;
-    --accent: #ffffff;
-    --accent-hover: #ffffff;
-    --accent-soft: rgba(255, 255, 255, 0.12);
-    --danger: #ff8a80;
-    --focus-ring: #ffffff;
-    --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.24);
-    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-:root[data-theme="dark"] body {
+:root body {
     background-color: var(--page-bg);
     color: var(--text-primary);
 }
 
-:root[data-theme="dark"] body :is(h1, h2, h3, h4, h5, h6, p, label, li, dt, dd, time, small) {
+:root body :is(h1, h2, h3, h4, h5, h6, p, label, li, dt, dd, time, small) {
     color: inherit;
 }
 
-:root[data-theme="dark"] body :is(input, select, textarea) {
+:root body :is(input, select, textarea) {
     color: var(--text-primary);
     border-color: var(--glass-border);
     color-scheme: dark;
 }
 
-:root[data-theme="dark"] body :is(input, select, textarea)::placeholder {
+:root body :is(input, select, textarea)::placeholder {
     color: var(--text-muted);
 }
 
-:root[data-theme="dark"] body :is(button, .main-button, .secondary-button) {
+:root body :is(button, .main-button, .secondary-button) {
     color: var(--text-primary);
 }
 
-:root[data-theme="dark"] .bottom-navigation {
+:root .bottom-navigation {
     border-color: var(--glass-border);
     background: rgba(20, 20, 20, 0.96);
     box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.28);
 }
 
-:root[data-theme="dark"] .bottom-nav-item {
+:root .bottom-nav-item {
     color: var(--text-muted);
 }
 
-:root[data-theme="dark"] .bottom-nav-item.active {
+:root .bottom-nav-item.active {
     color: var(--accent-hover);
 }
 
-:root[data-theme="dark"] .desktop-navigation a:hover,
-:root[data-theme="dark"] .desktop-navigation a.active,
-:root[data-theme="dark"] .desktop-nav-more:hover {
+:root .desktop-navigation a:hover,
+:root .desktop-navigation a.active,
+:root .desktop-nav-more:hover {
     color: var(--accent-hover);
 }
 
-:root[data-theme="dark"] .topbar .mobile-login {
+:root .topbar .mobile-login {
     color: var(--text-primary);
 }
 
-:root[data-theme="dark"] .topbar {
+:root .topbar {
     background: var(--topbar-bg);
     border-color: var(--glass-border);
 }
 
-:root[data-theme="dark"] .workout-item,
-:root[data-theme="dark"] .competition-result,
-:root[data-theme="dark"] .profile-detail,
-:root[data-theme="dark"] .profile-upload,
-:root[data-theme="dark"] .public-workout,
-:root[data-theme="dark"] .social-links a,
-:root[data-theme="dark"] .google-button,
-:root[data-theme="dark"] .exercise-card,
-:root[data-theme="dark"] .exercise-details,
-:root[data-theme="dark"] .exercise-form-field input {
+:root .workout-item,
+:root .competition-result,
+:root .profile-detail,
+:root .profile-upload,
+:root .public-workout,
+:root .social-links a,
+:root .google-button,
+:root .exercise-card,
+:root .exercise-details,
+:root .exercise-form-field input {
     color: var(--text-primary);
     border-color: var(--glass-border);
     background-color: var(--glass-subtle);
 }
 
-:root[data-theme="dark"] .person-top,
-:root[data-theme="dark"] .social-section,
-:root[data-theme="dark"] .profile-header,
-:root[data-theme="dark"] .profile-socials,
-:root[data-theme="dark"] .public-profile-header {
+:root .person-top,
+:root .social-section,
+:root .profile-header,
+:root .profile-socials,
+:root .public-profile-header {
     border-color: var(--glass-border);
 }
 
-:root[data-theme="dark"] .secondary-button {
+:root .secondary-button {
     border-color: var(--glass-border);
     color: var(--text-primary);
     background: var(--glass-subtle);
 }
 
-:root[data-theme="dark"] .secondary-button:hover {
+:root .secondary-button:hover {
     color: var(--text-primary);
     background: var(--glass-panel);
 }
 
-:root[data-theme="dark"] .mobile-nav-panel {
+:root .mobile-nav-panel {
     color: var(--text-primary);
     background: var(--glass-panel);
     box-shadow: 18px 0 48px rgba(0, 0, 0, 0.35);
 }
 
-:root[data-theme="dark"] .mobile-nav-heading {
+:root .mobile-nav-heading {
     border-color: var(--glass-border);
 }
 
-:root[data-theme="dark"] .mobile-nav-brand,
-:root[data-theme="dark"] .mobile-nav-links > a,
-:root[data-theme="dark"] .mobile-nav-links > .mobile-nav-logout,
-:root[data-theme="dark"] .mobile-nav-close {
+:root .mobile-nav-brand,
+:root .mobile-nav-links > a,
+:root .mobile-nav-links > .mobile-nav-logout,
+:root .mobile-nav-close {
     color: var(--text-primary);
 }
 
-:root[data-theme="dark"] .topbar .mobile-menu-toggle {
+:root .topbar .mobile-menu-toggle {
     border-color: var(--glass-border);
     color: var(--text-primary);
     background: var(--glass-subtle);
 }
 
-:root[data-theme="dark"] .mobile-nav-close {
+:root .mobile-nav-close {
     border: 0;
     color: var(--text-primary);
     background: transparent;
 }
 
-:root[data-theme="dark"] .mobile-nav-close:hover {
+:root .mobile-nav-close:hover {
     background: var(--glass-subtle);
 }
 
-:root[data-theme="dark"] .topbar .mobile-menu-toggle:hover {
+:root .topbar .mobile-menu-toggle:hover {
     background: var(--glass-panel);
 }
 
-:root[data-theme="dark"] .mobile-nav-links > a:hover,
-:root[data-theme="dark"] .mobile-nav-links > .mobile-nav-logout:hover {
+:root .mobile-nav-links > a:hover,
+:root .mobile-nav-links > .mobile-nav-logout:hover {
     color: var(--accent-hover);
     background: var(--accent-soft);
 }
 
-:root[data-theme="dark"] .auth-content a.google-oauth-button {
+:root .auth-content a.google-oauth-button {
     color: #202124;
     background: #fff;
     border-color: #dadce0;
@@ -5243,7 +5221,7 @@ body.mobile-nav-open {
     visibility: visible;
 }
 
-:root[data-theme="dark"] .exercise-card {
+:root .exercise-card {
     border: 1px solid var(--glass-border);
     border-radius: 12px;
     background: #141414;
@@ -5253,48 +5231,48 @@ body.mobile-nav-open {
         transform 160ms ease;
 }
 
-:root[data-theme="dark"] .exercise-card-media {
+:root .exercise-card-media {
     background: #141414;
 }
 
-:root[data-theme="dark"] .exercise-card:hover {
+:root .exercise-card:hover {
     border-color: #454545;
     background: #181818;
     transform: translateY(-2px);
 }
 
-:root[data-theme="dark"] .competition-result {
+:root .competition-result {
     border: 0;
     border-radius: 0;
     background: transparent;
 }
 
-:root[data-theme="dark"] .competition-result:hover {
+:root .competition-result:hover {
     background: #161616;
 }
 
-:root[data-theme="dark"] .competition-user-info strong {
+:root .competition-user-info strong {
     color: var(--text-primary);
 }
 
-:root[data-theme="dark"] .competition-user-info span {
+:root .competition-user-info span {
     color: var(--text-secondary);
 }
 
-:root[data-theme="dark"] .competition-avatar.placeholder {
+:root .competition-avatar.placeholder {
     background: #303030;
 }
 
-:root[data-theme="dark"] .exercise-details {
+:root .exercise-details {
     background: transparent;
 }
 
-:root[data-theme="dark"] .competition-search,
-:root[data-theme="dark"] .competition-section,
-:root[data-theme="dark"] .competition-search-area,
-:root[data-theme="dark"] .competition-people,
-:root[data-theme="dark"] .competition-results,
-:root[data-theme="dark"] .competition-grid {
+:root .competition-search,
+:root .competition-section,
+:root .competition-search-area,
+:root .competition-people,
+:root .competition-results,
+:root .competition-grid {
     background: transparent;
 }
 
@@ -5311,12 +5289,12 @@ body.app-page .exercise-library-page .exercise-card-media {
     background: transparent;
 }
 
-:root[data-theme="dark"] .competition-search-area {
+:root .competition-search-area {
     width: 100%;
 }
 
-:root[data-theme="dark"] .competition-search-area .competition-result,
-:root[data-theme="dark"] .competition-people .competition-card {
+:root .competition-search-area .competition-result,
+:root .competition-people .competition-card {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -5329,61 +5307,61 @@ body.app-page .exercise-library-page .exercise-card-media {
     transition: background-color 160ms ease;
 }
 
-:root[data-theme="dark"] .competition-search-area .competition-result:hover,
-:root[data-theme="dark"] .competition-people .competition-card:hover {
+:root .competition-search-area .competition-result:hover,
+:root .competition-people .competition-card:hover {
     background: #181818;
 }
 
-:root[data-theme="dark"] .competition-user-info strong,
-:root[data-theme="dark"] .competition-card-profile h3 {
+:root .competition-user-info strong,
+:root .competition-card-profile h3 {
     color: var(--text-primary);
     font-size: 15px;
     font-weight: 600;
 }
 
-:root[data-theme="dark"] .competition-user-info span,
-:root[data-theme="dark"] .competition-card-header p,
-:root[data-theme="dark"] .competition-card .recent-workouts {
+:root .competition-user-info span,
+:root .competition-card-header p,
+:root .competition-card .recent-workouts {
     color: var(--text-secondary);
     font-size: 12px;
 }
 
-:root[data-theme="dark"] .competition-people .competition-card-header {
+:root .competition-people .competition-card-header {
     flex: 1 1 50%;
     min-width: 0;
 }
 
-:root[data-theme="dark"] .competition-people .competition-card-profile {
+:root .competition-people .competition-card-profile {
     align-items: center;
 }
 
-:root[data-theme="dark"] .competition-people .today-workouts {
+:root .competition-people .today-workouts {
     flex: 1 1 35%;
     min-width: 0;
     padding: 0;
 }
 
-:root[data-theme="dark"] .competition-people .today-workouts p {
+:root .competition-people .today-workouts p {
     margin: 0;
     color: var(--text-secondary);
     font-size: 12px;
     line-height: 1.45;
 }
 
-:root[data-theme="dark"] .competition-avatar {
+:root .competition-avatar {
     width: 44px;
     height: 44px;
     flex-basis: 44px;
     border: 1px solid var(--glass-border);
 }
 
-:root[data-theme="dark"] .competition-avatar.placeholder {
+:root .competition-avatar.placeholder {
     background: #242424;
     color: var(--text-primary);
 }
 
-:root[data-theme="dark"] .competition-results .add-competitor-button,
-:root[data-theme="dark"] .competition-people .remove-competitor-button {
+:root .competition-results .add-competitor-button,
+:root .competition-people .remove-competitor-button {
     display: inline-grid;
     width: 36px;
     min-width: 36px;
@@ -5402,35 +5380,35 @@ body.app-page .exercise-library-page .exercise-card-media {
     line-height: 1;
 }
 
-:root[data-theme="dark"] .competition-results .add-competitor-button:hover,
-:root[data-theme="dark"] .competition-people .remove-competitor-button:hover {
+:root .competition-results .add-competitor-button:hover,
+:root .competition-people .remove-competitor-button:hover {
     border-color: var(--accent);
     color: var(--text-primary);
     background: rgba(255, 255, 255, 0.1);
 }
 
 @media (max-width: 600px) {
-    :root[data-theme="dark"] .competition-search-area .competition-result,
-    :root[data-theme="dark"] .competition-people .competition-card {
+    :root .competition-search-area .competition-result,
+    :root .competition-people .competition-card {
         gap: 10px;
         padding: 12px 2px;
     }
 
-    :root[data-theme="dark"] .competition-people .competition-card {
+    :root .competition-people .competition-card {
         flex-wrap: wrap;
     }
 
-    :root[data-theme="dark"] .competition-people .competition-card-header {
+    :root .competition-people .competition-card-header {
         flex: 1 1 calc(100% - 48px);
     }
 
-    :root[data-theme="dark"] .competition-people .today-workouts {
+    :root .competition-people .today-workouts {
         flex: 1 1 100%;
         padding-left: 54px;
     }
 }
 
-:root[data-theme="dark"] body :is(
+:root body :is(
     .container,
     .app-page,
     .profile-container,
@@ -5449,7 +5427,7 @@ body.app-page .exercise-library-page .exercise-card-media {
     box-shadow: none;
 }
 
-:root[data-theme="dark"] body :is(
+:root body :is(
     .card,
     .person-card,
     .profile-upload
@@ -5459,7 +5437,7 @@ body.app-page .exercise-library-page .exercise-card-media {
     box-shadow: none;
 }
 
-:root[data-theme="dark"] body :is(
+:root body :is(
     .person-top,
     .social-section,
     .profile-header,
@@ -5469,7 +5447,7 @@ body.app-page .exercise-library-page .exercise-card-media {
     border-color: var(--glass-border);
 }
 
-:root[data-theme="dark"] body :is(
+:root body :is(
     .competition-search,
     .competition-section,
     .competition-card,
@@ -5481,13 +5459,13 @@ body.app-page .exercise-library-page .exercise-card-media {
     background: transparent;
 }
 
-:root[data-theme="dark"] #firstSetupPage .setup-card {
+:root #firstSetupPage .setup-card {
     border-color: var(--glass-border);
     background: #141414;
     box-shadow: none;
 }
 
-:root[data-theme="dark"] .workout-item {
+:root .workout-item {
     border-color: var(--glass-border);
     background: transparent;
     box-shadow: none;

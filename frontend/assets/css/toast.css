@@ -22,7 +22,7 @@
     padding: 14px 13px 14px 15px;
     border: 1px solid var(--glass-border, rgba(148, 163, 184, 0.25));
     border-radius: 16px;
-    background: var(--glass-panel, #fff);
+    background: var(--page-bg, #f8f9fa);
     color: var(--text-primary, #111827);
     box-shadow: 0 14px 38px rgba(15, 23, 42, 0.18), var(--shadow-soft, 0 2px 8px rgba(0, 0, 0, 0.06));
     -webkit-backdrop-filter: blur(18px);

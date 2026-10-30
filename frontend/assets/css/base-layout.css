@@ -13,28 +13,28 @@ html {
 }
 
 :root {
-    color-scheme: light;
-    --page-bg: #f8f9fa;
-    --topbar-bg: #ffffff;
-    --glass-panel: #ffffff;
-    --glass-subtle: #f3f4f6;
-    --glass-control: #ffffff;
-    --glass-border: #d1d5db;
-    --text-primary: #111827;
-    --text-secondary: #4b5563;
-    --text-muted: #6b7280;
-    --text-on-accent: #111827;
+    color-scheme: dark;
+    --page-bg: #101010;
+    --topbar-bg: #141414;
+    --glass-panel: #181818;
+    --glass-subtle: #1d1d1d;
+    --glass-control: #141414;
+    --glass-border: #303030;
+    --text-primary: #f2f2f2;
+    --text-secondary: #b8b8b8;
+    --text-muted: #8d8d8d;
+    --text-on-accent: #101010;
     --accent: #ffffff;
     --accent-hover: #ffffff;
-    --accent-soft: rgba(255, 255, 255, 0.1);
+    --accent-soft: rgba(255, 255, 255, 0.12);
     --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --danger: #b42318;
+    --danger: #ff8a80;
     --focus-ring: #ffffff;
-    --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.08);
-    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.055);
+    --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.24);
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.2);
     --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
-    --theme-transition: 320ms ease-in-out;
+    --ui-transition: 320ms ease-in-out;
 }
 
 body {
@@ -138,7 +138,7 @@ a {
     font-weight: 500;
     letter-spacing: 0.01em;
 
-    transition: color var(--theme-transition);
+    transition: color var(--ui-transition);
 }
 
 .topbar nav a:hover,
@@ -157,7 +157,7 @@ a {
 
     padding: 0;
 
-    transition: color var(--theme-transition);
+    transition: color var(--ui-transition);
 }
 
 .topbar nav button:hover {

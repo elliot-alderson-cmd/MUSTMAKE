@@ -79,10 +79,10 @@ input,
 select,
 textarea {
     transition:
-        color var(--theme-transition),
-        background-color var(--theme-transition),
-        border-color var(--theme-transition),
-        box-shadow var(--theme-transition),
+        color var(--ui-transition),
+        background-color var(--ui-transition),
+        border-color var(--ui-transition),
+        box-shadow var(--ui-transition),
         transform 240ms var(--ease-premium);
 }
 
@@ -119,10 +119,10 @@ textarea {
     border-radius: 50%;
     box-shadow: var(--shadow-soft);
     transition:
-        color var(--theme-transition),
-        background-color var(--theme-transition),
-        border-color var(--theme-transition),
-        box-shadow var(--theme-transition);
+        color var(--ui-transition),
+        background-color var(--ui-transition),
+        border-color var(--ui-transition),
+        box-shadow var(--ui-transition);
 }
 
 .search-trigger:hover {
@@ -410,12 +410,12 @@ h4,
 h5,
 h6 {
     transition:
-        color var(--theme-transition),
-        background-color var(--theme-transition),
-        border-color var(--theme-transition),
-        box-shadow var(--theme-transition),
-        fill var(--theme-transition),
-        stroke var(--theme-transition),
+        color var(--ui-transition),
+        background-color var(--ui-transition),
+        border-color var(--ui-transition),
+        box-shadow var(--ui-transition),
+        fill var(--ui-transition),
+        stroke var(--ui-transition),
         transform 240ms var(--ease-premium);
 }
 
@@ -426,10 +426,10 @@ h6 {
         opacity 200ms ease,
         transform 260ms var(--ease-premium),
         visibility 0s linear 260ms,
-        color var(--theme-transition),
-        background-color var(--theme-transition),
-        border-color var(--theme-transition),
-        box-shadow var(--theme-transition);
+        color var(--ui-transition),
+        background-color var(--ui-transition),
+        border-color var(--ui-transition),
+        box-shadow var(--ui-transition);
 }
 
 .search-control.is-open .search-overlay {
@@ -439,10 +439,10 @@ h6 {
         opacity 200ms ease,
         transform 260ms var(--ease-premium),
         visibility 0s,
-        color var(--theme-transition),
-        background-color var(--theme-transition),
-        border-color var(--theme-transition),
-        box-shadow var(--theme-transition);
+        color var(--ui-transition),
+        background-color var(--ui-transition),
+        border-color var(--ui-transition),
+        box-shadow var(--ui-transition);
 }
 
 .person-top,
