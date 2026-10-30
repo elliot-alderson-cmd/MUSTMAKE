@@ -226,15 +226,9 @@
             const homeLink = document.getElementById("homeLink");
             homeLink.href = destination;
 
-            const prefersReducedMotion = window.matchMedia(
-                "(prefers-reduced-motion: reduce)"
-            ).matches;
-
-            const redirectDelay = prefersReducedMotion ? 200 : 1800;
-
             window.setTimeout(() => {
                 window.location.replace(destination);
-            }, redirectDelay);
+            }, 500);
         })();
     </script>
 </body>
