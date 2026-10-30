@@ -114,7 +114,6 @@
 }
 
 .monitor-preview video[hidden],
-.monitor-summary[hidden],
 .monitor-preview-placeholder[hidden] {
     display: none;
 }
@@ -141,6 +140,19 @@
 .monitor-preview-placeholder > span:last-child {
     font-size: 12px;
     line-height: 1.5;
+}
+
+.monitor-preview[data-smart-camera-mode="true"]:not(.smart-camera-visible) {
+    background: transparent;
+}
+
+.monitor-preview[data-smart-camera-mode="true"]:not(.smart-camera-visible) video,
+.monitor-preview[data-smart-camera-mode="true"]:not(.smart-camera-visible) canvas {
+    visibility: hidden;
+}
+
+.monitor-preview[data-smart-camera-mode="true"]:not(.smart-camera-visible) .monitor-smart-overlay {
+    visibility: hidden;
 }
 
 @media (max-width: 768px), (pointer: coarse) {
@@ -302,7 +314,7 @@ body.smart-camera-fullscreen > :not(.monitor-preview) {
     color: #ff6b73;
     background: transparent;
     box-shadow: none;
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 700;
     line-height: 1.2;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95);
@@ -383,7 +395,7 @@ body.smart-camera-fullscreen > :not(.monitor-preview) {
     bottom: auto;
     left: auto;
     width: min(420px, calc(100% - 28px));
-    font-size: 22px;
+    font-size: 16px;
     font-weight: 700;
     line-height: 1.25;
     text-align: right;
@@ -538,10 +550,26 @@ body.smart-camera-fullscreen > :not(.monitor-preview) {
 }
 
 .monitor-summary {
-    padding: 15px;
-    border: 1px solid var(--glass-border);
-    border-radius: 14px;
-    background: var(--glass-subtle);
+    inset: 0;
+    width: min(620px, calc(100vw - 2rem));
+    max-width: none;
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    margin: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    color: var(--text-primary);
+    background: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+}
+
+.monitor-summary::backdrop {
+    background: rgba(0, 0, 0, 0.46);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
 }
 
 .monitor-section-heading {

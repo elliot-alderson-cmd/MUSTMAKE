@@ -138,6 +138,7 @@ export function mountAiMonitor(
     const canvas = root.querySelector("#monitorCanvas");
     const preview = root.querySelector(".monitor-preview");
     const previewSlot = root.querySelector(".monitor-preview-slot");
+    const smartCameraPrompt = root.querySelector("#monitorSmartScrollPrompt");
     const smartOverlay = root.querySelector(".monitor-smart-overlay");
     const monitor = root.querySelector(".exercise-monitor");
     const placeholder = root.querySelector(".monitor-preview-placeholder");
@@ -149,8 +150,6 @@ export function mountAiMonitor(
     const finishButton = root.querySelector("#monitorFinish");
     const monitorControls = root.querySelector(".monitor-controls");
     const summary = root.querySelector("#monitorSummary");
-    const summaryExercise = root.querySelector("#monitorSummaryExercise");
-    const summaryMetric = root.querySelector("#monitorSummaryMetric");
     const correction = root.querySelector("#monitorCorrection");
     const weightInput = root.querySelector("#workout-weight");
     const correctionError = root.querySelector("#monitorCorrectionError");
@@ -282,6 +281,18 @@ export function mountAiMonitor(
         preview.style.height = `${rect.height}px`;
     }
 
+    function updateSmartCameraPreview() {
+        preview.dataset.smartCameraMode = String(smartCameraEnabled);
+
+        const showScrollPrompt =
+            smartCameraEnabled &&
+            !previewTargetFullscreen &&
+            !["error", "finished", "saved"].includes(lifecycle);
+
+        smartCameraPrompt.hidden = !showScrollPrompt;
+        placeholder.hidden = Boolean(stream) && !showScrollPrompt;
+    }
+
     function getFullscreenPreviewGeometry() {
         return getVisibleViewport();
     }
@@ -296,10 +307,15 @@ export function mountAiMonitor(
         previewTransitioning = false;
 
         if (previewTargetFullscreen) {
+            preview.classList.add("smart-camera-visible");
             document.body.classList.add("smart-camera-fullscreen");
         } else {
             previewSlot.append(preview);
-            preview.classList.remove("is-fixed", "is-fullscreen");
+            preview.classList.remove(
+                "is-fixed",
+                "is-fullscreen",
+                "smart-camera-visible"
+            );
             ["left", "top", "width", "height", "transition"].forEach(property => {
                 preview.style.removeProperty(property);
             });
@@ -307,6 +323,8 @@ export function mountAiMonitor(
             document.body.classList.remove("smart-camera-fullscreen");
             if (!smartCameraEnabled) restoreSmartOverlayNodes();
         }
+
+        updateSmartCameraPreview();
     }
 
     function transitionPreview(fullscreen) {
@@ -316,6 +334,10 @@ export function mountAiMonitor(
         if (!current.width || !current.height) return;
 
         previewTargetFullscreen = fullscreen;
+        if (!fullscreen) {
+            preview.classList.remove("smart-camera-visible");
+        }
+        updateSmartCameraPreview();
         previewTransitionGeneration += 1;
         const generation = previewTransitionGeneration;
         clearTimeout(previewTransitionTimer);
@@ -374,6 +396,7 @@ export function mountAiMonitor(
         monitor.dataset.smartCameraMode = String(nextEnabled);
         smartScrollArmed = false;
         lastScrollPosition = getScrollPosition();
+        updateSmartCameraPreview();
 
         if (nextEnabled) {
             smartOverlayNodes.forEach(node => smartOverlay.append(node));
@@ -447,6 +470,7 @@ export function mountAiMonitor(
         lifecycle = state;
         status.dataset.state = state;
         status.textContent = message;
+        updateSmartCameraPreview();
 
         if (state === "running") {
             smartScrollArmed = false;
@@ -468,12 +492,13 @@ export function mountAiMonitor(
         correction.disabled =
             state === "saving" || state === "saved";
 
-        if (
-            state === "finished" ||
-            state === "saving" ||
-            state === "saved"
-        ) {
-            summary.hidden = false;
+        if (state === "finished" || state === "saving") {
+            if (!summary.open) {
+                summary.showModal();
+                correction.focus({ preventScroll: true });
+            }
+        } else if (summary.open) {
+            summary.close();
         }
     }
 
@@ -726,7 +751,7 @@ export function mountAiMonitor(
         video.pause();
         video.srcObject = null;
         video.hidden = true;
-        placeholder.hidden = false;
+        updateSmartCameraPreview();
         cameraStatus.textContent = "Camera off";
 
         clearOverlay();
@@ -970,7 +995,7 @@ export function mountAiMonitor(
 
             video.srcObject = stream;
             video.hidden = false;
-            placeholder.hidden = true;
+            updateSmartCameraPreview();
 
             await video.play();
 
@@ -1017,7 +1042,6 @@ export function mountAiMonitor(
             lastTimestamp = 0;
 
             sessionStarted = true;
-            summary.hidden = true;
 
             setStatus("running", "Monitoring");
 
@@ -1066,15 +1090,9 @@ export function mountAiMonitor(
         endActiveInterval();
         releaseMonitoring();
 
-        summaryExercise.textContent = exercise.name;
-
         const reviewValue = isPlank
             ? roundedDuration(elapsedMs)
             : rawCount;
-
-        summaryMetric.textContent = isPlank
-            ? formatTime(reviewValue)
-            : String(rawCount);
 
         correction.value = String(reviewValue);
         correctionError.textContent = "";
@@ -1087,10 +1105,20 @@ export function mountAiMonitor(
 
         setStatus(
             "finished",
-            "Review to save."
+            "Session finished."
         );
 
-        correction.focus();
+        const revealReview = () => {
+            if (disposed || lifecycle !== "finished") return;
+
+            correction.focus({ preventScroll: true });
+        };
+
+        if (previewTransitioning) {
+            window.setTimeout(revealReview, 380);
+        } else {
+            revealReview();
+        }
     }
 
     function discardSession() {
@@ -1120,23 +1148,19 @@ export function mountAiMonitor(
             timeOutput.textContent = "00:00";
         }
 
-        summary.hidden = true;
+        if (summary.open) summary.close();
         correction.value = "0";
         correctionError.textContent = "";
 
         onWorkoutSaved?.();
-
-        setFeedback(
-            "Session cleared."
-        );
-
-        setStatus("idle", "Ready");
+        window.queueToast?.("Session discarded.", "success");
+        window.location.replace("/today");
     }
 
     function correctedCount() {
         const value = correction.value.trim();
         const parsed = Number(value);
-        const minimum = 0;
+        const minimum = 1;
         const maximum = MAX_REVIEWED_VALUE;
 
         const valid =
@@ -1378,6 +1402,8 @@ export function mountAiMonitor(
         endActiveInterval();
         disposed = true;
 
+        if (summary.open) summary.close();
+
         releaseMonitoring();
 
         listeners.abort();
@@ -1385,7 +1411,11 @@ export function mountAiMonitor(
         if (scrollFrame != null) cancelAnimationFrame(scrollFrame);
         clearTimeout(previewTransitionTimer);
         previewSlot.append(preview);
-        preview.classList.remove("is-fixed", "is-fullscreen");
+        preview.classList.remove(
+            "is-fixed",
+            "is-fullscreen",
+            "smart-camera-visible"
+        );
         ["left", "top", "width", "height", "transition"].forEach(property => {
             preview.style.removeProperty(property);
         });
@@ -1398,6 +1428,12 @@ export function mountAiMonitor(
     finishButton.addEventListener(
         "click",
         finishSession,
+        { signal: listeners.signal }
+    );
+
+    summary.addEventListener(
+        "cancel",
+        event => event.preventDefault(),
         { signal: listeners.signal }
     );
 
@@ -1531,12 +1567,6 @@ export function mountAiMonitor(
             );
         }
 
-        summaryExercise.textContent = exercise.name;
-
-        summaryMetric.textContent = isPlank
-            ? formatTime(roundedDuration(elapsedMs))
-            : String(rawCount);
-
         correction.value = String(
             snapshot.reviewedCount ?? (
                 isPlank
@@ -1545,16 +1575,20 @@ export function mountAiMonitor(
             )
         );
 
-        summary.hidden = false;
-
         if (snapshot.saved) {
             window.showToast("Workout saved.", { type: "success" });
 
             setStatus("saved", "Workout saved.");
         } else {
+            setFeedback(
+                isPlank
+                    ? "Review your time."
+                    : "Review your count."
+            );
+
             setStatus(
                 "finished",
-                "Session finished. Review before saving."
+                "Session finished."
             );
         }
     } else if (pendingWorkout) {
@@ -1580,12 +1614,6 @@ export function mountAiMonitor(
                 countOutput.textContent = String(rawCount);
             }
         }
-
-        summaryExercise.textContent = exercise.name;
-
-        summaryMetric.textContent = isPlank
-            ? formatTime(reviewedValue)
-            : String(reviewedValue);
 
         correction.value = String(reviewedValue);
 

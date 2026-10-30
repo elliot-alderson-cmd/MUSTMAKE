@@ -155,17 +155,11 @@
         const isJumpCount = exercise.slug === "skipping-rope";
         const weightField = exercise.fields.find(field => field.name === "weight");
 
-        const displayMetric = isPlank
-            ? "correct plank time"
-            : isJumpCount
-                ? "detected jumps"
-                : "detected reps";
-
         const correctionLabel = isPlank
-            ? "Correct plank seconds to save"
+            ? "Plank time (seconds)"
             : isJumpCount
-                ? "Jumps to save"
-                : "Repetitions to save";
+                ? "Jumps"
+                : "Repetitions";
 
         return `
             <div class="exercise-monitor">
@@ -180,7 +174,9 @@
                     <div class="monitor-preview">
                         <video id="monitorVideo" playsinline muted hidden aria-label="Live camera preview"></video>
                         <canvas id="monitorCanvas" width="640" height="480" aria-label="Detected body landmarks and skeleton overlay"></canvas>
-                        <div class="monitor-preview-placeholder" aria-hidden="true"></div>
+                        <div class="monitor-preview-placeholder" role="status" aria-live="polite">
+                            <strong id="monitorSmartScrollPrompt" hidden>Scroll ↓</strong>
+                        </div>
                         <div class="monitor-smart-overlay"></div>
                     </div>
                 </div>
@@ -194,7 +190,6 @@
                 <div class="monitor-stats monitor-stats-single" aria-label="Live session statistics">
                     ${isPlank ? "" : `
                         <div class="monitor-stat monitor-stat-repetitions">
-                            <span>Repetitions</span>
                             <strong id="monitorRepCount" aria-live="polite">0</strong>
                         </div>
                     `}
@@ -207,16 +202,11 @@
                     ` : ""}
                 </div>
 
-                <section id="monitorSummary" class="monitor-summary" aria-labelledby="monitorSummaryTitle" hidden>
+                <dialog id="monitorSummary" class="monitor-summary" aria-labelledby="monitorSummaryTitle" aria-modal="true">
                     <div class="monitor-section-heading">
                         <div>
-                            <h3 id="monitorSummaryTitle">Workout summary</h3>
-                            <p>
-                                <span id="monitorSummaryExercise"></span>
-                                ·
-                                <span id="monitorSummaryMetric"></span>
-                                ${displayMetric}
-                            </p>
+                            <h3 id="monitorSummaryTitle">Review</h3>
+                            <p>${escapeHTML(exercise.name)}</p>
                         </div>
                     </div>
 
@@ -228,7 +218,7 @@
                             id="monitorCorrection"
                             name="${isPlank ? "reviewedDuration" : isJumpCount ? "reviewedJumps" : "reviewedReps"}"
                             type="number"
-                            min="0"
+                            min="1"
                             max="150"
                             step="1"
                             inputmode="numeric"
@@ -242,7 +232,7 @@
                         <button id="monitorSave" class="main-button monitor-save" type="button" disabled>Save Workout</button>
                         <button id="monitorDiscard" class="secondary-button monitor-discard" type="button" disabled>Discard Session</button>
                     </div>
-                </section>
+                </dialog>
             </div>
         `;
     }
