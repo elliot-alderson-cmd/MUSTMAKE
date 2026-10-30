@@ -31,7 +31,7 @@
     <!-- Existing project scripts -->
     <script src="/js/core/change_backend_url.js"></script>
 
-    <link rel="icon" type="image/x-icon" href="/assets/images/favicon.jpeg">
+    <link rel="icon" type="image/png" href="/assets/images/favicon.png">
 
     <title>Blog | MUSTMAKE</title>
 
@@ -188,430 +188,75 @@
 
 
         /* =========================================
-           SUNRISE OCEAN CTA
-           No card / No border / Seamless background
+           VIDEO CTA
         ========================================= */
-.cta-section {
-    position: relative;
-    isolation: isolate;
-    overflow: hidden;
+        .cta-section {
+            position: relative;
+            isolation: isolate;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 420px;
+            padding: 80px 24px;
+            margin: 65px 0;
+            text-align: center;
+            background: #07131b;
+        }
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    min-height: 420px;
-    padding: 100px 24px;
-
-    margin: 65px 0;
-    text-align: center;
-
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-}
-
-
-        /* =========================================
-           SKY AND ATMOSPHERE
-        ========================================= */
-
-        .cta-ocean {
+        .cta-video {
             position: absolute;
             inset: 0;
             z-index: 0;
-
-            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
             pointer-events: none;
-
-            background:
-                radial-gradient(
-                    ellipse 65% 55% at 50% 36%,
-                    rgba(255, 204, 130, 0.24),
-                    transparent 78%
-                ),
-                linear-gradient(
-                    180deg,
-                    rgba(255, 161, 105, 0.03) 0%,
-                    rgba(255, 169, 112, 0.17) 17%,
-                    rgba(255, 202, 145, 0.30) 34%,
-                    rgba(255, 225, 179, 0.20) 46%,
-                    rgba(90, 177, 211, 0.15) 55%,
-                    rgba(20, 132, 188, 0.30) 100%
-                );
-
-            /* Seamlessly fade into page background */
-            -webkit-mask-image: linear-gradient(
-                to bottom,
-                transparent 0%,
-                black 10%,
-                black 88%,
-                transparent 100%
-            );
-
-            mask-image: linear-gradient(
-                to bottom,
-                transparent 0%,
-                black 10%,
-                black 88%,
-                transparent 100%
-            );
         }
 
-
-        /* Warm atmospheric sunrise glow */
-
-        .cta-ocean::before {
-            content: "";
-            position: absolute;
-
-            width: 75%;
-            height: 55%;
-
-            left: 12.5%;
-            top: 12%;
-
-            background: radial-gradient(
-                ellipse at center,
-                rgba(255, 191, 115, 0.25),
-                rgba(255, 155, 100, 0.09) 48%,
-                transparent 75%
-            );
-
-            filter: blur(35px);
-
-            animation: sunrise-atmosphere 10s ease-in-out infinite;
-        }
-
-
-        /* =========================================
-           SUN
-        ========================================= */
-
-        .ocean-sun {
-            position: absolute;
-
-            width: 76px;
-            height: 76px;
-
-            top: 2%;
-            left: 50%;
-
-            transform: translateX(-50%);
-            border-radius: 50%;
-
-            z-index: 2;
-
-            background: radial-gradient(
-                circle,
-                #fffde9 0%,
-                #fff4c9 30%,
-                #ffdf91 65%,
-                #ffbd75 100%
-            );
-
-            box-shadow:
-                0 0 22px rgba(255, 235, 175, 0.75),
-                0 0 55px rgba(255, 197, 112, 0.50),
-                0 0 110px rgba(255, 157, 90, 0.28);
-
-            animation: sunrise-glow 8s ease-in-out infinite;
-        }
-
-
-        /* =========================================
-           OCEAN WATER
-        ========================================= */
-
-        .ocean-water {
-            position: absolute;
-
-            inset: 40% 0 0;
-
-            z-index: 1;
-            overflow: hidden;
-
-            background: linear-gradient(
-                180deg,
-                rgba(116, 187, 205, 0.18) 0%,
-                rgba(50, 159, 201, 0.62) 20%,
-                rgba(25, 139, 191, 0.84) 55%,
-                rgba(9, 105, 163, 0.90) 100%
-            );
-        }
-
-
-        /* Sunlight reflecting on the ocean */
-
-        .ocean-water::before {
+        .cta-section::before {
             content: "";
             position: absolute;
             inset: 0;
+            z-index: 1;
+            background: linear-gradient(
+                90deg,
+                rgba(4, 10, 18, 0.5),
+                rgba(4, 10, 18, 0.28) 50%,
+                rgba(4, 10, 18, 0.5)
+            );
+            pointer-events: none;
+        }
+
+        .cta-content {
+            position: relative;
             z-index: 2;
-
-            background: linear-gradient(
-                100deg,
-                transparent 15%,
-                rgba(255, 239, 197, 0.08) 35%,
-                rgba(255, 229, 171, 0.24) 50%,
-                rgba(255, 239, 197, 0.08) 65%,
-                transparent 85%
-            );
-
-            background-size: 200% 100%;
-
-            animation: water-reflection 14s ease-in-out infinite;
-
-            pointer-events: none;
+            width: 100%;
+            max-width: 900px;
+            margin: auto;
+            padding: 0 20px;
         }
 
-
-        /* Additional golden sun reflection */
-
-        .ocean-sunlight {
-            position: absolute;
-
-            width: 30%;
-            height: 75%;
-
-            left: 50%;
-            top: 39%;
-
-            transform: translateX(-50%);
-
-            z-index: 3;
-
-            background: linear-gradient(
-                180deg,
-                rgba(255, 235, 178, 0.38) 0%,
-                rgba(255, 215, 147, 0.20) 35%,
-                rgba(255, 206, 137, 0.08) 70%,
-                transparent 100%
-            );
-
-            filter: blur(22px);
-            pointer-events: none;
+        .cta-section h2 {
+            color: #ffffff;
+            font-size: clamp(1.5rem, 3.5vw, 2.3rem);
+            font-weight: 700;
+            line-height: 1.4;
+            margin: 0 0 28px;
+            text-shadow: 0 2px 18px rgba(0, 0, 0, 0.7);
         }
 
-
-        /* =========================================
-           OCEAN WAVES
-        ========================================= */
-
-        .wave {
-            position: absolute;
-
-            width: 200%;
-            height: 100%;
-            min-height: 190px;
-
-            left: -50%;
-            bottom: -1px;
-
-            overflow: visible;
-
-            will-change: transform;
+        .cta-section .main-button {
+            position: relative;
+            z-index: 2;
+            display: inline-flex;
+            margin-bottom: 10px;
         }
-
-        .wave path {
-            stroke: none;
-        }
-
-
-        /* Wave 1 */
-
-        .wave-one {
-            opacity: 0.37;
-            animation: wave-motion-one 19s ease-in-out infinite;
-        }
-
-        .wave-one path {
-            fill: #38bdf8;
-        }
-
-
-        /* Wave 2 */
-
-        .wave-two {
-            opacity: 0.34;
-            animation: wave-motion-two 25s ease-in-out infinite;
-        }
-
-        .wave-two path {
-            fill: #7dd3fc;
-        }
-
-
-        /* Wave 3 */
-
-        .wave-three {
-            opacity: 0.25;
-            animation: wave-motion-three 30s ease-in-out infinite;
-        }
-
-        .wave-three path {
-            fill: #bae6fd;
-        }
-
-
-        /* Wave 4 */
-
-        .wave-four {
-            opacity: 0.16;
-            animation: wave-motion-four 36s ease-in-out infinite;
-        }
-
-        .wave-four path {
-            fill: #e0f2fe;
-        }
-
-
-        /* =========================================
-           CTA TEXT
-        ========================================= */
-.cta-content {
-    position: relative;
-    z-index: 10;
-
-    width: 100%;
-    max-width: 900px;
-    margin: auto;
-    padding: 0 20px;
-
-    animation: content-float 7s ease-in-out infinite;
-}
-
-.cta-section h2 {
-    color: #ffffff;
-    font-size: clamp(1.5rem, 3.5vw, 2.3rem);
-    font-weight: 700;
-    line-height: 1.4;
-
-    margin: 0 0 28px;
-
-    text-shadow: 0 2px 15px rgba(0, 35, 65, 0.45);
-}
-
-.cta-section .main-button {
-    position: relative;
-    z-index: 12;
-    display: inline-block;
-    margin-bottom: 10px;
-}
 
         .cta-section .main-button:hover {
             transform: translateY(-3px);
-
-            box-shadow:
-                0 9px 28px rgba(56, 189, 248, 0.22);
-        }
-
-
-        /* =========================================
-           ANIMATIONS
-        ========================================= */
-
-        /* Floating text */
-
-        @keyframes content-float {
-            0%, 100% {
-                transform: translateY(0);
-            }
-
-            50% {
-                transform: translateY(-5px);
-            }
-        }
-
-
-        /* Sun glow */
-
-        @keyframes sunrise-glow {
-            0%, 100% {
-                box-shadow:
-                    0 0 22px rgba(255, 235, 175, 0.65),
-                    0 0 55px rgba(255, 197, 112, 0.4),
-                    0 0 110px rgba(255, 157, 90, 0.24);
-            }
-
-            50% {
-                box-shadow:
-                    0 0 32px rgba(255, 245, 205, 0.85),
-                    0 0 75px rgba(255, 197, 112, 0.55),
-                    0 0 135px rgba(255, 157, 90, 0.32);
-            }
-        }
-
-
-        /* Atmospheric light */
-
-        @keyframes sunrise-atmosphere {
-            0%, 100% {
-                opacity: 0.7;
-                transform: scale(1);
-            }
-
-            50% {
-                opacity: 1;
-                transform: scale(1.08);
-            }
-        }
-
-
-        /* Moving sunlight */
-
-        @keyframes water-reflection {
-            0%, 100% {
-                background-position: 100% 0;
-            }
-
-            50% {
-                background-position: 0% 0;
-            }
-        }
-
-
-        /* Natural ocean movement */
-
-        @keyframes wave-motion-one {
-            0%, 100% {
-                transform: translate3d(0, 0, 0);
-            }
-
-            50% {
-                transform: translate3d(-5%, -9px, 0);
-            }
-        }
-
-        @keyframes wave-motion-two {
-            0%, 100% {
-                transform: translate3d(0, 0, 0);
-            }
-
-            50% {
-                transform: translate3d(6%, 7px, 0);
-            }
-        }
-
-        @keyframes wave-motion-three {
-            0%, 100% {
-                transform: translate3d(0, 0, 0);
-            }
-
-            50% {
-                transform: translate3d(-4%, -6px, 0);
-            }
-        }
-
-        @keyframes wave-motion-four {
-            0%, 100% {
-                transform: translate3d(0, 0, 0);
-            }
-
-            50% {
-                transform: translate3d(4%, 5px, 0);
-            }
+            box-shadow: 0 9px 28px rgba(56, 189, 248, 0.22);
         }
 
 
@@ -631,17 +276,6 @@
             }
         }
 
-@media (max-width: 768px) {
-    .cta-section {
-        min-height: 380px;
-        padding: 80px 18px;
-    }
-
-    .ocean-sun {
-        width: 62px;
-        height: 62px;
-    }
-}
         /* =========================================
            RESPONSIVE DESIGN
         ========================================= */
@@ -682,15 +316,6 @@
                 margin: 45px 0;
             }
 
-            .ocean-sun {
-                width: 62px;
-                height: 62px;
-            }
-
-            .ocean-water {
-                inset: 48% 0 0;
-            }
-
             .cta-content {
                 max-width: 100%;
             }
@@ -699,9 +324,6 @@
                 font-size: clamp(1.5rem, 6vw, 1.9rem);
             }
 
-            .wave {
-                min-height: 150px;
-            }
         }
 
 
@@ -710,13 +332,7 @@
         ========================================= */
 
         @media (prefers-reduced-motion: reduce) {
-
-            .blog-hero,
-            .cta-content,
-            .ocean-sun,
-            .cta-ocean::before,
-            .wave,
-            .ocean-water::before {
+            .blog-hero {
                 animation: none !important;
             }
 
@@ -780,107 +396,26 @@
 
 
         <!-- =====================================
-             SUNRISE OCEAN CTA
+             VIDEO CTA
         ====================================== -->
 
         <section class="cta-section">
 
-            <!-- Ocean background -->
-
-            <div class="cta-ocean" aria-hidden="true">
-
-                <!-- Rising sun -->
-
-                <div class="ocean-sun"></div>
-
-
-                <!-- Ocean water -->
-
-                <div class="ocean-water">
-
-
-                    <!-- First wave -->
-
-                    <svg
-                        class="wave wave-one"
-                        viewBox="0 0 1440 320"
-                        preserveAspectRatio="none">
-
-                        <path d="
-                            M0 160
-                            C180 100 300 220 480 160
-                            S780 100 960 160
-                            S1260 220 1440 160
-                            L1440 320 L0 320 Z
-                        "/>
-
-                    </svg>
+            <video
+                class="cta-video"
+                autoplay
+                muted
+                loop
+                playsinline
+                preload="metadata"
+                aria-hidden="true"
+                tabindex="-1"
+            >
+                <source src="/assets/images/watermov-short.mp4" type="video/mp4">
+            </video>
 
 
-                    <!-- Second wave -->
-
-                    <svg
-                        class="wave wave-two"
-                        viewBox="0 0 1440 320"
-                        preserveAspectRatio="none">
-
-                        <path d="
-                            M0 190
-                            C200 120 350 250 540 180
-                            S850 110 1050 180
-                            S1300 240 1440 170
-                            L1440 320 L0 320 Z
-                        "/>
-
-                    </svg>
-
-
-                    <!-- Third wave -->
-
-                    <svg
-                        class="wave wave-three"
-                        viewBox="0 0 1440 320"
-                        preserveAspectRatio="none">
-
-                        <path d="
-                            M0 170
-                            C160 230 320 100 500 170
-                            S820 240 1000 160
-                            S1300 100 1440 180
-                            L1440 320 L0 320 Z
-                        "/>
-
-                    </svg>
-
-
-                    <!-- Fourth wave -->
-
-                    <svg
-                        class="wave wave-four"
-                        viewBox="0 0 1440 320"
-                        preserveAspectRatio="none">
-
-                        <path d="
-                            M0 180
-                            C180 130 340 230 520 180
-                            S850 120 1030 180
-                            S1300 230 1440 170
-                            L1440 320 L0 320 Z
-                        "/>
-
-                    </svg>
-
-                </div>
-
-
-                <!-- Sunlight reflection -->
-
-                <div class="ocean-sunlight"></div>
-
-            </div>
-
-
-            <!-- Floating CTA content -->
+            <!-- CTA content -->
 
             <div class="cta-content">
 

@@ -1,13 +1,20 @@
 (() => {
     "use strict";
 
-    const EXERCISE_CACHE_KEY = "mustmake_exercises_v3";
-    const PREVIOUS_EXERCISE_CACHE_KEY = "mustmake_exercises_v2";
-    const LEGACY_EXERCISE_CACHE_KEY = "mustmake_exercises";
+    const EXERCISE_CACHE_KEY = "mustmake_exercises_v4";
+    const OUTDATED_EXERCISE_CACHE_KEYS = [
+        "mustmake_exercises_v3",
+        "mustmake_exercises_v2",
+        "mustmake_exercises"
+    ];
     const PENDING_WORKOUT_KEY = "mustmake_pending_workout";
     const root = document.getElementById("exerciseDetail");
     const slug = document.body.dataset.exerciseSlug;
     if (!root || !slug) return;
+
+    function clearOutdatedExerciseCaches() {
+        OUTDATED_EXERCISE_CACHE_KEYS.forEach(key => sessionStorage.removeItem(key));
+    }
 
     function readPendingWorkout() {
         try {
@@ -61,8 +68,7 @@
     function cacheExercises(exercises) {
         try {
             sessionStorage.setItem(EXERCISE_CACHE_KEY, JSON.stringify(exercises));
-            sessionStorage.removeItem(PREVIOUS_EXERCISE_CACHE_KEY);
-            sessionStorage.removeItem(LEGACY_EXERCISE_CACHE_KEY);
+            clearOutdatedExerciseCaches();
         } catch (error) {
             console.warn("Could not cache the exercise catalog.", error);
         }
@@ -605,7 +611,7 @@
                 sessionStorage.getItem(EXERCISE_CACHE_KEY) || "null"
             );
             if (!Array.isArray(cachedExercises)) {
-                sessionStorage.removeItem(LEGACY_EXERCISE_CACHE_KEY);
+                clearOutdatedExerciseCaches();
                 sessionStorage.removeItem(EXERCISE_CACHE_KEY);
             }
         } catch (error) {
@@ -619,7 +625,7 @@
         let catalogError;
 
         try {
-            const response = await fetch("/data/exercises.json");
+            const response = await fetch("/data/exercises.json?v=4", { cache: "no-cache" });
 
             if (!response.ok) {
                 throw new Error(
@@ -641,7 +647,8 @@
 
         try {
             const response = await fetch(
-                `${window.API_URL}/api/exercises`
+                `${window.API_URL}/api/exercises?v=4`,
+                { cache: "no-cache" }
             );
 
             if (!response.ok) {

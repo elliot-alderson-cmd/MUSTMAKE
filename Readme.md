@@ -1,6 +1,6 @@
 # MustMake
 <p align="center">
-  <img src="frontend/assets/images/favicon.jpeg" alt="MustMake" width="120">
+  <img src="frontend/assets/images/favicon.png" alt="MustMake" width="120">
 </p>
 
 MustMake is a fitness tracking application focused on consistency, measurable progress, and long-term improvement.

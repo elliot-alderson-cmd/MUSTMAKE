@@ -1,11 +1,18 @@
 (() => {
     "use strict";
 
-    const EXERCISE_CACHE_KEY = "mustmake_exercises_v3";
-    const PREVIOUS_EXERCISE_CACHE_KEY = "mustmake_exercises_v2";
-    const LEGACY_EXERCISE_CACHE_KEY = "mustmake_exercises";
+    const EXERCISE_CACHE_KEY = "mustmake_exercises_v4";
+    const OUTDATED_EXERCISE_CACHE_KEYS = [
+        "mustmake_exercises_v3",
+        "mustmake_exercises_v2",
+        "mustmake_exercises"
+    ];
     const grid = document.getElementById("exerciseGrid");
     if (!grid) return;
+
+    function clearOutdatedExerciseCaches() {
+        OUTDATED_EXERCISE_CACHE_KEYS.forEach(key => sessionStorage.removeItem(key));
+    }
 
     const escapeHTML = value =>
         String(value ?? "").replace(/[&<>"']/g, character => ({
@@ -19,8 +26,7 @@
     function cacheExercises(exercises) {
         try {
             sessionStorage.setItem(EXERCISE_CACHE_KEY, JSON.stringify(exercises));
-            sessionStorage.removeItem(PREVIOUS_EXERCISE_CACHE_KEY);
-            sessionStorage.removeItem(LEGACY_EXERCISE_CACHE_KEY);
+            clearOutdatedExerciseCaches();
         } catch (error) {
             console.warn("Could not cache the exercise catalog.", error);
         }
@@ -88,7 +94,7 @@
         try {
             cachedExercises = JSON.parse(sessionStorage.getItem(EXERCISE_CACHE_KEY) || "null");
             if (!Array.isArray(cachedExercises)) {
-                sessionStorage.removeItem(LEGACY_EXERCISE_CACHE_KEY);
+                clearOutdatedExerciseCaches();
                 sessionStorage.removeItem(EXERCISE_CACHE_KEY);
             }
         } catch (error) {
@@ -98,7 +104,7 @@
 
         let catalogError;
         try {
-            const response = await fetch("/data/exercises.json");
+            const response = await fetch("/data/exercises.json?v=4", { cache: "no-cache" });
             if (!response.ok) throw new Error(`Exercise catalog returned ${response.status}.`);
             const exercises = await response.json();
             if (!Array.isArray(exercises)) throw new Error("Exercise catalog returned invalid data.");
@@ -109,7 +115,7 @@
         }
 
         try {
-            const response = await fetch(`${window.API_URL}/api/exercises`);
+            const response = await fetch(`${window.API_URL}/api/exercises?v=4`, { cache: "no-cache" });
             if (!response.ok) throw new Error(`Exercise API returned ${response.status}.`);
             const exercises = await response.json();
             if (!Array.isArray(exercises)) throw new Error("Exercise API returned an invalid catalog.");

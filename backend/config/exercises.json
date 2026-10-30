@@ -39,7 +39,7 @@
         "slug": "plank",
         "name": "Plank",
         "group": "bodyweight",
-        "media": { "src": "/assets/images/plank.jpeg", "type": "image" },
+        "media": { "src": "/assets/images/plank.webp", "type": "image" },
         "modes": ["ai", "manual"],
         "manualType": "duration",
         "fields": [
@@ -98,7 +98,7 @@
         "slug": "cycling",
         "name": "Cycling",
         "group": "bodyweight",
-        "media": { "src": "/assets/images/cycling.jpeg", "type": "image" },
+        "media": { "src": "/assets/images/cycling.webp", "type": "image" },
         "modes": ["manual"],
         "manualType": "distance-duration",
         "fields": [
@@ -110,7 +110,7 @@
         "slug": "swimming",
         "name": "Swimming",
         "group": "bodyweight",
-        "media": { "src": "/assets/images/swim.jpeg", "type": "image" },
+        "media": { "src": "/assets/images/swim.webp", "type": "image" },
         "modes": ["manual"],
         "manualType": "distance-duration",
         "fields": [
