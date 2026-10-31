@@ -1,7 +1,9 @@
 const CAMERA_MIRROR_KEY_PREFIX = "mustmake_camera_mirror:";
 const SMART_CAMERA_MODE_KEY_PREFIX = "mustmake_smart_camera_mode:";
+const EXERCISE_SOUND_KEY_PREFIX = "mustmake_exercise_sound:";
 const CAMERA_PREFERENCE_CHANGE_EVENT = "mustmake:camera-preference-change";
 const SMART_CAMERA_MODE_CHANGE_EVENT = "mustmake:smart-camera-mode-change";
+const EXERCISE_SOUND_CHANGE_EVENT = "mustmake:exercise-sound-change";
 
 function getPreferenceUserKey() {
     let user = null;
@@ -26,6 +28,10 @@ export function getCameraMirrorPreferenceKey() {
 
 export function getSmartCameraModePreferenceKey() {
     return `${SMART_CAMERA_MODE_KEY_PREFIX}${getPreferenceUserKey()}`;
+}
+
+export function getExerciseSoundPreferenceKey() {
+    return `${EXERCISE_SOUND_KEY_PREFIX}${getPreferenceUserKey()}`;
 }
 
 export function getCameraMirrorPreference() {
@@ -84,7 +90,33 @@ export function setSmartCameraModePreference(enabled) {
     return true;
 }
 
+export function getExerciseSoundPreference() {
+    try {
+        return localStorage.getItem(getExerciseSoundPreferenceKey()) !== "false";
+    } catch {
+        return true;
+    }
+}
+
+export function setExerciseSoundPreference(enabled) {
+    const value = Boolean(enabled);
+
+    try {
+        localStorage.setItem(getExerciseSoundPreferenceKey(), String(value));
+    } catch (error) {
+        console.warn("Could not save the exercise sound preference.", error);
+        return false;
+    }
+
+    window.dispatchEvent(new CustomEvent(EXERCISE_SOUND_CHANGE_EVENT, {
+        detail: { enabled: value }
+    }));
+
+    return true;
+}
+
 export {
     CAMERA_PREFERENCE_CHANGE_EVENT,
-    SMART_CAMERA_MODE_CHANGE_EVENT
+    SMART_CAMERA_MODE_CHANGE_EVENT,
+    EXERCISE_SOUND_CHANGE_EVENT
 };

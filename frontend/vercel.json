@@ -13,7 +13,8 @@
     { "source": "/pages/user-profile", "destination": "/user-profile", "permanent": true },
     { "source": "/pages/competition", "destination": "/competition", "permanent": true },
     { "source": "/pages/google-callback", "destination": "/google-callback", "permanent": true },
-    { "source": "/pages/firstdetails", "destination": "/first-details", "permanent": true }
+    { "source": "/pages/firstdetails", "destination": "/first-details", "permanent": true },
+    { "source": "/about.html", "destination": "/about", "permanent": true }
   ],
   "rewrites": [
     { "source": "/blog", "destination": "/pages/blog" },

@@ -21,14 +21,18 @@ export const SQUAT_THRESHOLDS = Object.freeze({
 });
 
 export const PUSH_UP_THRESHOLDS = Object.freeze({
-    visibility: VISIBILITY_THRESHOLD,
-    starting: 140,
-    lowering: 135,
-    bottom: 130,
-    returning: 135,
-    settleMs: 0,
+    visibility: 0.35,
+    maxHandGroundDistance: 0.12,
+    starting: 145,
+    lowering: 130,
+    bottom: 108,
+    returning: 122,
+    minShoulderDropRatio: 0.08,
+    maxTorsoAngle: 55,
+    settleMs: 35,
     establishMs: 120,
-    returnMs: 0
+    returnMs: 35,
+    maxLostFramesGraceMs: 450
 });
 
 export const PLANK_THRESHOLDS = Object.freeze({
@@ -291,36 +295,113 @@ export class SquatDetector extends RepDetector {
 
 export class PushUpDetector extends RepDetector {
     constructor(thresholds = PUSH_UP_THRESHOLDS) {
-        super(thresholds, "Show one arm.", "Can't see hands.");
+        super(thresholds, "Get in plank.", "Can't see arm.");
+        this.lastSeenAt = null;
+        this.startShoulderWristY = null;
+    }
+
+    reset(count = 0) {
+        super.reset(count);
+        this.lastSeenAt = null;
+        this.startShoulderWristY = null;
+    }
+
+    resetMovement() {
+        super.resetMovement();
+        this.lastSeenAt = null;
+        this.startShoulderWristY = null;
     }
 
     update(landmarks, now = performance.now()) {
-        const candidates = [];
-        for (const side of Object.values(LANDMARKS)) {
-            const shoulder = landmarks?.[side.shoulder];
-            const elbow = landmarks?.[side.elbow];
+        const t = this.thresholds;
+        const validSides = [];
+        const bothHandsGrounded = Object.values(LANDMARKS).every(side => {
             const wrist = landmarks?.[side.wrist];
-            if (![shoulder, elbow, wrist].every(point =>
-                visible(point, this.thresholds.visibility)
-            )) continue;
+            const ankle = landmarks?.[side.ankle];
+            return visible(wrist, t.visibility) &&
+                visible(ankle, t.visibility) &&
+                Math.abs(wrist.y - ankle.y) <= t.maxHandGroundDistance;
+        });
 
-            const armAngle = angleAt(shoulder, elbow, wrist);
-            if (armAngle == null) continue;
-            candidates.push(armAngle);
-        }
-        if (!candidates.length) {
+        if (!bothHandsGrounded) {
             this.loseTracking();
             return this.result(null);
         }
 
-        const angle = this.filteredAngle = smoothedAngle(this.filteredAngle, average(candidates));
-        const t = this.thresholds;
+        for (const side of Object.values(LANDMARKS)) {
+            const shoulder = landmarks?.[side.shoulder];
+            const elbow = landmarks?.[side.elbow];
+            const wrist = landmarks?.[side.wrist];
+            const hip = landmarks?.[side.hip];
+            const knee = landmarks?.[side.knee];
+            const ankle = landmarks?.[side.ankle];
+
+            if (![shoulder, elbow, wrist].every(p => visible(p, t.visibility))) continue;
+
+            const armAngle = angleAt(shoulder, elbow, wrist);
+            if (armAngle == null) continue;
+
+            const upperArmLength = Math.hypot(shoulder.x - elbow.x, shoulder.y - elbow.y);
+            if (upperArmLength < 0.025) continue;
+
+            const lowerAnchor = visible(hip, t.visibility)
+                ? hip
+                : visible(knee, t.visibility)
+                    ? knee
+                    : visible(ankle, t.visibility)
+                        ? ankle
+                        : null;
+
+            if (lowerAnchor) {
+                const dx = Math.abs(shoulder.x - lowerAnchor.x);
+                const dy = Math.abs(shoulder.y - lowerAnchor.y);
+                const torsoAngle = Math.atan2(dy, Math.max(dx, 0.001)) * 180 / Math.PI;
+                const isFrontView = dx < 0.08 && wrist.y > shoulder.y;
+                if (!isFrontView && torsoAngle > t.maxTorsoAngle) continue;
+            }
+
+            if (wrist.y < shoulder.y - 0.05) continue;
+
+            const armLength = upperArmLength + Math.hypot(elbow.x - wrist.x, elbow.y - wrist.y);
+            const shoulderWristY = (wrist.y - shoulder.y) / Math.max(armLength, 0.1);
+
+            validSides.push({
+                angle: armAngle,
+                shoulderWristY,
+                confidence: (shoulder.visibility + elbow.visibility + wrist.visibility) / 3
+            });
+        }
+
+        if (!validSides.length) {
+            if (this.lastSeenAt != null && (now - this.lastSeenAt) <= t.maxLostFramesGraceMs && this.state !== "unknown") {
+                return this.result(this.filteredAngle);
+            }
+            this.loseTracking();
+            return this.result(null);
+        }
+
+        this.lastSeenAt = now;
+
+        validSides.sort((a, b) => b.confidence - a.confidence);
+        const bestSide = validSides[0];
+        const rawAngle = (validSides.length === 2 && validSides[1].confidence >= bestSide.confidence - 0.15)
+            ? (validSides[0].angle + validSides[1].angle) / 2
+            : bestSide.angle;
+        const currentShoulderWristY = (validSides.length === 2 && validSides[1].confidence >= bestSide.confidence - 0.15)
+            ? (validSides[0].shoulderWristY + validSides[1].shoulderWristY) / 2
+            : bestSide.shoulderWristY;
+
+        const angle = this.filteredAngle = smoothedAngle(this.filteredAngle, rawAngle);
+
+        const hasRealChestDrop = this.startShoulderWristY == null ||
+            (this.startShoulderWristY - currentShoulderWristY) >= t.minShoulderDropRatio;
 
         if (this.state === "unknown") {
             this.feedback = "Arms straight.";
             if (angle >= t.starting) {
                 this.holdTransition("starting", now, t.establishMs, () => {
                     this.state = "starting";
+                    this.startShoulderWristY = currentShoulderWristY;
                     this.feedback = "Ready. Lower.";
                 });
             } else {
@@ -328,10 +409,16 @@ export class PushUpDetector extends RepDetector {
             }
         } else if (this.state === "starting") {
             this.feedback = "Ready. Lower.";
-            if (angle <= t.bottom) {
-                this.pendingState = null;
-                this.state = "bottom";
-                this.feedback = "Bottom reached.";
+            if (angle >= t.starting) {
+                this.startShoulderWristY = this.startShoulderWristY == null
+                    ? currentShoulderWristY
+                    : Math.max(this.startShoulderWristY * 0.9 + currentShoulderWristY * 0.1, currentShoulderWristY);
+            }
+            if (angle <= t.bottom && hasRealChestDrop) {
+                this.holdTransition("bottom", now, t.settleMs, () => {
+                    this.state = "bottom";
+                    this.feedback = "Push up.";
+                });
             } else if (angle <= t.lowering) {
                 this.holdTransition("lowering", now, t.settleMs, () => {
                     this.state = "lowering";
@@ -342,10 +429,10 @@ export class PushUpDetector extends RepDetector {
             }
         } else if (this.state === "lowering") {
             this.feedback = "Keep lowering.";
-            if (angle <= t.bottom) {
+            if (angle <= t.bottom && hasRealChestDrop) {
                 this.holdTransition("bottom", now, t.settleMs, () => {
                     this.state = "bottom";
-                    this.feedback = "Bottom reached.";
+                    this.feedback = "Push up.";
                 });
             } else if (angle >= t.starting) {
                 this.holdTransition("starting", now, t.settleMs, () => {
@@ -356,32 +443,35 @@ export class PushUpDetector extends RepDetector {
                 this.clearPending();
             }
         } else if (this.state === "bottom") {
-            this.feedback = "Bottom reached.";
-            if (angle >= t.starting) {
-                this.pendingState = null;
-                this.count += 1;
-                this.state = "starting";
-                this.feedback = "Nice rep.";
-            } else if (angle >= t.returning) {
-                this.holdTransition("returning", now, t.settleMs, () => {
-                    this.state = "returning";
-                    this.feedback = "Push up.";
-                });
-            } else {
-                this.clearPending();
-            }
-        } else if (this.state === "returning") {
             this.feedback = "Push up.";
             if (angle >= t.starting) {
                 this.holdTransition("starting", now, t.returnMs, () => {
                     this.count += 1;
                     this.state = "starting";
+                    this.startShoulderWristY = currentShoulderWristY;
+                    this.feedback = "Nice rep.";
+                });
+            } else if (angle >= t.returning) {
+                this.holdTransition("returning", now, t.settleMs, () => {
+                    this.state = "returning";
+                    this.feedback = "Lock out.";
+                });
+            } else {
+                this.clearPending();
+            }
+        } else if (this.state === "returning") {
+            this.feedback = "Lock out.";
+            if (angle >= t.starting) {
+                this.holdTransition("starting", now, t.returnMs, () => {
+                    this.count += 1;
+                    this.state = "starting";
+                    this.startShoulderWristY = currentShoulderWristY;
                     this.feedback = "Nice rep.";
                 });
             } else if (angle <= t.bottom) {
                 this.holdTransition("bottom", now, t.settleMs, () => {
                     this.state = "bottom";
-                    this.feedback = "Bottom reached.";
+                    this.feedback = "Push up.";
                 });
             } else {
                 this.clearPending();
@@ -486,7 +576,7 @@ class AngleCycleDetector extends RepDetector {
                 this.holdTransition("start", now, t.returnMs, () => {
                     this.count += 1;
                     this.state = "start";
-                this.feedback = "Nice rep.";
+                    this.feedback = "Nice rep.";
                 });
             } else if (returnedAgain) {
                 this.holdTransition("bottom", now, t.settleMs, () => {

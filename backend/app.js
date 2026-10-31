@@ -73,7 +73,8 @@ if (fs.existsSync(frontendRoot)) {
         "/competition": "competition.html",
         "/google-callback": "google-callback.html",
         "/first-details": "firstdetails.html",
-        "/about": "about-us.html"
+        "/about": "about-us.html",
+        "/about.html": "about-us.html"
     };
 
     for (const [route, page] of Object.entries(frontendPages)) {
@@ -95,6 +96,12 @@ if (fs.existsSync(frontendRoot)) {
     });
 
     app.use(express.static(frontendRoot));
+} else {
+    // The API is sometimes deployed from the backend directory alone. In that
+    // setup, send browser requests for the About page to the frontend site.
+    app.get(["/about", "/about.html"], (req, res) => {
+        res.redirect("https://mustmake.vercel.app/about");
+    });
 }
 
 app.use(errorHandler);
