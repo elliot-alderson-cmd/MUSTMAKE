@@ -124,6 +124,23 @@ function angleAt(a, vertex, c) {
     return Math.acos(cosine) * 180 / Math.PI;
 }
 
+function angleAt3d(a, vertex, c) {
+    if (![a, vertex, c].every(point => Number.isFinite(point.z))) {
+        return angleAt(a, vertex, c);
+    }
+
+    const first = [a.x - vertex.x, a.y - vertex.y, a.z - vertex.z];
+    const second = [c.x - vertex.x, c.y - vertex.y, c.z - vertex.z];
+    const firstLength = Math.hypot(...first);
+    const secondLength = Math.hypot(...second);
+    if (firstLength < MIN_SEGMENT_LENGTH || secondLength < MIN_SEGMENT_LENGTH) return null;
+    const cosine = Math.max(-1, Math.min(1,
+        first.reduce((sum, value, index) => sum + value * second[index], 0) /
+            (firstLength * secondLength)
+    ));
+    return Math.acos(cosine) * 180 / Math.PI;
+}
+
 function average(values) {
     return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
 }
@@ -315,18 +332,6 @@ export class PushUpDetector extends RepDetector {
     update(landmarks, now = performance.now()) {
         const t = this.thresholds;
         const validSides = [];
-        const bothHandsGrounded = Object.values(LANDMARKS).every(side => {
-            const wrist = landmarks?.[side.wrist];
-            const ankle = landmarks?.[side.ankle];
-            return visible(wrist, t.visibility) &&
-                visible(ankle, t.visibility) &&
-                Math.abs(wrist.y - ankle.y) <= t.maxHandGroundDistance;
-        });
-
-        if (!bothHandsGrounded) {
-            this.loseTracking();
-            return this.result(null);
-        }
 
         for (const side of Object.values(LANDMARKS)) {
             const shoulder = landmarks?.[side.shoulder];
@@ -338,7 +343,7 @@ export class PushUpDetector extends RepDetector {
 
             if (![shoulder, elbow, wrist].every(p => visible(p, t.visibility))) continue;
 
-            const armAngle = angleAt(shoulder, elbow, wrist);
+            const armAngle = angleAt3d(shoulder, elbow, wrist);
             if (armAngle == null) continue;
 
             const upperArmLength = Math.hypot(shoulder.x - elbow.x, shoulder.y - elbow.y);
@@ -352,13 +357,15 @@ export class PushUpDetector extends RepDetector {
                         ? ankle
                         : null;
 
-            if (lowerAnchor) {
-                const dx = Math.abs(shoulder.x - lowerAnchor.x);
-                const dy = Math.abs(shoulder.y - lowerAnchor.y);
-                const torsoAngle = Math.atan2(dy, Math.max(dx, 0.001)) * 180 / Math.PI;
-                const isFrontView = dx < 0.08 && wrist.y > shoulder.y;
-                if (!isFrontView && torsoAngle > t.maxTorsoAngle) continue;
-            }
+            if (!lowerAnchor ||
+                Math.abs(wrist.y - lowerAnchor.y) > t.maxHandGroundDistance ||
+                wrist.y < lowerAnchor.y - 0.05) continue;
+
+            const dx = Math.abs(shoulder.x - lowerAnchor.x);
+            const dy = Math.abs(shoulder.y - lowerAnchor.y);
+            const torsoAngle = Math.atan2(dy, Math.max(dx, 0.001)) * 180 / Math.PI;
+            const isFrontView = dx < 0.08 && wrist.y > shoulder.y;
+            if (!isFrontView && torsoAngle > t.maxTorsoAngle) continue;
 
             if (wrist.y < shoulder.y - 0.05) continue;
 
@@ -384,11 +391,16 @@ export class PushUpDetector extends RepDetector {
 
         validSides.sort((a, b) => b.confidence - a.confidence);
         const bestSide = validSides[0];
-        const rawAngle = (validSides.length === 2 && validSides[1].confidence >= bestSide.confidence - 0.15)
-            ? (validSides[0].angle + validSides[1].angle) / 2
+        const averageSides = validSides.length === 2 &&
+            validSides[1].confidence >= bestSide.confidence - 0.15;
+        const totalConfidence = averageSides
+            ? validSides[0].confidence + validSides[1].confidence
+            : 1;
+        const rawAngle = averageSides
+            ? validSides.reduce((sum, side) => sum + side.angle * side.confidence, 0) / totalConfidence
             : bestSide.angle;
-        const currentShoulderWristY = (validSides.length === 2 && validSides[1].confidence >= bestSide.confidence - 0.15)
-            ? (validSides[0].shoulderWristY + validSides[1].shoulderWristY) / 2
+        const currentShoulderWristY = averageSides
+            ? validSides.reduce((sum, side) => sum + side.shoulderWristY * side.confidence, 0) / totalConfidence
             : bestSide.shoulderWristY;
 
         const angle = this.filteredAngle = smoothedAngle(this.filteredAngle, rawAngle);

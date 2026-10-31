@@ -156,6 +156,8 @@ export function mountAiMonitor(
     const correction = root.querySelector("#monitorCorrection");
     const weightInput = root.querySelector("#workout-weight");
     const correctionError = root.querySelector("#monitorCorrectionError");
+    const signInPrompt = root.querySelector("#monitorSignInPrompt");
+    const signInPromptMessage = signInPrompt?.querySelector("span");
     const saveButton = root.querySelector("#monitorSave");
     const discardButton = root.querySelector("#monitorDiscard");
     const monitorHeading = status.closest(".monitor-heading");
@@ -196,9 +198,6 @@ export function mountAiMonitor(
     const context = canvas.getContext("2d");
     const detector = createExerciseDetector(exercise.slug);
     const listeners = new AbortController();
-    const discardSound = new Audio("/assets/discardsession.mp3");
-    discardSound.preload = "auto";
-
     function applyCameraMirrorPreference() {
         preview.dataset.mirrored = String(getCameraMirrorPreference());
     }
@@ -599,28 +598,6 @@ export function mountAiMonitor(
         const sound = new Audio("/assets/nice_rep.mp3");
         sound.play().catch(error => {
             console.warn("Could not play the rep sound.", error);
-        });
-    }
-
-    function playSound(sound, label) {
-        if (!soundEnabled) return Promise.resolve();
-
-        sound.currentTime = 0;
-        return new Promise(resolve => {
-            const finish = () => {
-                sound.removeEventListener("ended", finish);
-                resolve();
-            };
-            sound.addEventListener("ended", finish, { once: true });
-            const handlePlaybackError = error => {
-                console.warn(`Could not play the ${label} sound.`, error);
-                finish();
-            };
-            try {
-                sound.play().catch(handlePlaybackError);
-            } catch (error) {
-                handlePlaybackError(error);
-            }
         });
     }
 
@@ -1228,7 +1205,7 @@ export function mountAiMonitor(
         }
     }
 
-    async function discardSession() {
+    function discardSession() {
         if (discardInProgress || !["finished", "saved"].includes(lifecycle)) {
             return;
         }
@@ -1240,9 +1217,7 @@ export function mountAiMonitor(
         ) {
             return;
         }
-
         discardInProgress = true;
-        await playSound(discardSound, "session discard");
         rawCount = 0;
         elapsedMs = 0;
         sessionStarted = false;
@@ -1262,7 +1237,13 @@ export function mountAiMonitor(
         correctionError.textContent = "";
 
         onWorkoutSaved?.();
-        window.queueToast?.("Session discarded.", "success");
+        if (soundEnabled) {
+            try {
+                sessionStorage.setItem("mustmake_pending_discard_sound", "true");
+            } catch (error) {
+                console.warn("Could not queue the session discard sound.", error);
+            }
+        }
         window.location.replace("/today");
     }
 
@@ -1349,20 +1330,23 @@ export function mountAiMonitor(
 
         if (!token) {
             if (!onSignInRequired?.(payload)) {
-                window.showToast(
-                    "Could not preserve this workout. Please try again before signing in.",
-                    { type: "error" }
-                );
+                if (signInPromptMessage) {
+                    signInPromptMessage.textContent =
+                        "Could not preserve this workout. Please try again before signing in.";
+                }
+                if (signInPrompt) signInPrompt.hidden = false;
                 return;
             }
 
-            window.showToast("Please sign in to save this workout.", {
-                type: "info",
-                action: { label: "Sign in", href: "/login" }
-            });
+            if (signInPromptMessage) {
+                signInPromptMessage.textContent =
+                    "Sign in to save this reviewed workout.";
+            }
+            if (signInPrompt) signInPrompt.hidden = false;
             return;
         }
 
+        if (signInPrompt) signInPrompt.hidden = true;
         saveInFlight = true;
 
         setStatus("saving", "Saving reviewed workout…");

@@ -228,6 +228,11 @@
                         <p id="monitorCorrectionError" class="exercise-form-message" role="alert"></p>
                     </div>
 
+                    <p id="monitorSignInPrompt" class="monitor-sign-in-prompt" role="status" hidden>
+                        <span>Sign in to save this reviewed workout.</span>
+                        <a href="/login">Sign in</a>
+                    </p>
+
                     <div class="monitor-review-controls">
                         <button id="monitorSave" class="main-button monitor-save" type="button" disabled>Save Workout</button>
                         <button id="monitorDiscard" class="secondary-button monitor-discard" type="button" disabled>Discard Session</button>

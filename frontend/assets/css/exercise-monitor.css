@@ -515,6 +515,26 @@ body.smart-camera-fullscreen > :not(.monitor-preview) {
     grid-template-columns: minmax(0, 1fr);
 }
 
+.monitor-sign-in-prompt {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 12px 0;
+    color: var(--text-primary);
+    font-size: 13px;
+}
+
+.monitor-sign-in-prompt[hidden] {
+    display: none;
+}
+
+.monitor-sign-in-prompt a {
+    flex: 0 0 auto;
+    color: var(--accent-hover);
+    font-weight: 700;
+}
+
 .monitor-stat {
     display: grid;
     gap: 5px;

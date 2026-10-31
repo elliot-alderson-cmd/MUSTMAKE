@@ -273,20 +273,59 @@ test("push-up detector counts a full cycle when facing the camera", () => {
     assert.equal(detector.count, 1);
 });
 
-test("push-up detector requires visible feet to verify hands are grounded", () => {
+test("push-up detector uses 3D elbow flexion alongside 2D shoulder drop", () => {
+    const detector = new PushUpDetector();
+    const depthPose = (bent) => {
+        const landmarks = frontFacingPushUpPose(180);
+        if (bent) {
+            for (const [elbow, offset] of [[13, 0.1], [14, -0.1]]) {
+                landmarks[elbow].x += offset;
+                landmarks[elbow].z = 0.16;
+            }
+        }
+        for (const index of [11, 12, 15, 16]) landmarks[index].z = 0;
+        return landmarks;
+    };
+
+    feed(detector, depthPose(false), 0);
+    feed(detector, depthPose(true), 800);
+    feed(detector, depthPose(false), 1600);
+    assert.equal(detector.count, 1);
+});
+
+test("push-up detector ignores depth-only elbow bends without shoulder drop", () => {
+    const detector = new PushUpDetector();
+    const poseWithDepthBend = bent => {
+        const landmarks = frontFacingPushUpPose(180);
+        for (const index of [11, 12, 15, 16]) landmarks[index].z = 0;
+        if (bent) {
+            landmarks[13].z = 0.16;
+            landmarks[14].z = 0.16;
+        }
+        return landmarks;
+    };
+
+    feed(detector, poseWithDepthBend(false), 0);
+    feed(detector, poseWithDepthBend(true), 800);
+    feed(detector, poseWithDepthBend(false), 1600);
+    assert.equal(detector.count, 0);
+});
+
+test("push-up detector accepts knee support when feet are cropped", () => {
     const detector = new PushUpDetector();
     let time = 0;
-    for (const angle of [155, 125, 155, 155]) {
+    for (const angle of [180, 130, 90, 130, 180, 180]) {
         const landmarks = frontFacingPushUpPose(angle);
         for (const index of [23, 24, 27, 28]) {
             landmarks[index].visibility = 0.1;
         }
+        landmarks[25] = { x: 0.4, y: 0.62, visibility: 0.95 };
+        landmarks[26] = { x: 0.6, y: 0.62, visibility: 0.95 };
         feed(detector, landmarks, time, 6);
         time += 600;
     }
 
-    assert.equal(detector.count, 0);
-    assert.match(detector.feedback, /Can't see arm/);
+    assert.equal(detector.count, 1);
 });
 
 test("push-up detector rejects arm cycles when the hands are raised off the ground", () => {
@@ -305,7 +344,7 @@ test("push-up detector rejects arm cycles when the hands are raised off the grou
     assert.match(detector.feedback, /Can't see arm/);
 });
 
-test("push-up detector requires both hands to be visible", () => {
+test("push-up detector counts with only one visible arm", () => {
     const detector = new PushUpDetector();
     let time = 0;
     for (const angle of [180, 130, 90, 130, 180, 180]) {
@@ -315,8 +354,7 @@ test("push-up detector requires both hands to be visible", () => {
         time += 600;
     }
 
-    assert.equal(detector.count, 0);
-    assert.match(detector.feedback, /Can't see arm/);
+    assert.equal(detector.count, 1);
 });
 
 test("push-up detector tracks using the visible arm when the other arm is unreliable", () => {
@@ -329,6 +367,37 @@ test("push-up detector tracks using the visible arm when the other arm is unreli
     detector.update(unreliable, 2400);
     assert.equal(detector.count, 0);
     assert.notEqual(detector.state, "unknown");
+});
+
+test("push-up detector retains its phase through brief elbow occlusion only", () => {
+    const detector = new PushUpDetector();
+    feed(detector, pushUpPose(180), 0);
+    feed(detector, pushUpPose(90), 800);
+    const lost = pose().map(() => ({ x: 0.5, y: 0.5, visibility: 0.1 }));
+
+    detector.update(lost, 1600);
+    assert.equal(detector.state, "bottom");
+    detector.update(lost, 2100);
+    assert.equal(detector.state, "unknown");
+    feed(detector, pushUpPose(180), 2200);
+    assert.equal(detector.count, 0);
+});
+
+test("push-up detector debounces bottom and return transitions for 35ms", () => {
+    const detector = new PushUpDetector();
+    detector.update(pushUpPose(180), 0);
+    detector.update(pushUpPose(180), 120);
+    assert.equal(detector.state, "starting");
+
+    detector.update(pushUpPose(90), 130);
+    detector.update(pushUpPose(90), 164);
+    assert.equal(detector.state, "starting");
+    detector.update(pushUpPose(90), 165);
+    assert.equal(detector.state, "bottom");
+
+    detector.update(pushUpPose(180), 170);
+    detector.update(pushUpPose(180), 205);
+    assert.equal(detector.count, 1);
 });
 
 test("both detectors count a faster full cycle without counting a hold twice", () => {
