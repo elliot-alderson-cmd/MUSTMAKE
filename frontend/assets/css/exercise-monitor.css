@@ -20,6 +20,13 @@
     letter-spacing: 0.12em;
 }
 
+.monitor-ai-disclaimer {
+    margin: -14px 0 0;
+    color: var(--text-muted);
+    font-size: 10px;
+    line-height: 1.2;
+}
+
 .monitor-heading h2,
 .monitor-section-heading h3 {
     margin: 0;
@@ -322,7 +329,7 @@ body.smart-camera-fullscreen > :not(.monitor-preview) {
     padding: 0;
     border: 0;
     border-radius: 0;
-    color: #ff6b73;
+    color: #ff2800;
     background: transparent;
     box-shadow: none;
     font-size: 16px;
@@ -560,7 +567,7 @@ body.smart-camera-fullscreen > :not(.monitor-preview) {
 
 #monitorFeedback {
     margin: 0 0 8px;
-    color: #ff6b73;
+    color: #ff2800;
     font-size: 16px;
     font-weight: 800;
     line-height: 1.4;
@@ -653,7 +660,7 @@ body.smart-camera-fullscreen > :not(.monitor-preview) {
 .monitor-exercise-fields .exercise-form-message {
     min-height: 1.2em;
     margin: 4px 0 0;
-    color: #ef4444;
+    color: #ff2800;
     font-size: 11px;
 }
 

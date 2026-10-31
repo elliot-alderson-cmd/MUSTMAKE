@@ -273,6 +273,47 @@ test("push-up detector counts a full cycle when facing the camera", () => {
     assert.equal(detector.count, 1);
 });
 
+test("push-up detector tracks the rep phase without visible ground-support landmarks", () => {
+    const detector = new PushUpDetector();
+    let time = 0;
+    for (const angle of [180, 130, 90, 130, 180, 180]) {
+        const landmarks = frontFacingPushUpPose(angle);
+        for (const index of [23, 24, 25, 26, 27, 28]) {
+            landmarks[index].visibility = 0.1;
+        }
+        feed(detector, landmarks, time, 6);
+        time += 600;
+    }
+
+    assert.equal(detector.count, 1);
+});
+
+test("push-up detector does not require hand-to-ground alignment", () => {
+    const detector = new PushUpDetector();
+    let time = 0;
+    for (const angle of [180, 130, 90, 130, 180, 180]) {
+        const landmarks = frontFacingPushUpPose(angle);
+        for (const index of [11, 13, 15, 12, 14, 16]) {
+            landmarks[index].y -= 0.2;
+        }
+        feed(detector, landmarks, time, 6);
+        time += 600;
+    }
+
+    assert.equal(detector.count, 1);
+});
+
+test("push-up detector avoids averaging conflicting arm angles", () => {
+    const detector = new PushUpDetector();
+    const straight = frontFacingPushUpPose(180);
+    const bent = frontFacingPushUpPose(90);
+    for (const index of [12, 14, 16]) {
+        straight[index] = { ...bent[index], visibility: 0.82 };
+    }
+
+    assert.equal(detector.update(straight, 0).angle, 180);
+});
+
 test("push-up detector uses 3D elbow flexion alongside 2D shoulder drop", () => {
     const detector = new PushUpDetector();
     const depthPose = (bent) => {
@@ -328,22 +369,6 @@ test("push-up detector accepts knee support when feet are cropped", () => {
     assert.equal(detector.count, 1);
 });
 
-test("push-up detector rejects arm cycles when the hands are raised off the ground", () => {
-    const detector = new PushUpDetector();
-    let time = 0;
-    for (const angle of [180, 130, 90, 130, 180, 180]) {
-        const landmarks = frontFacingPushUpPose(angle);
-        for (const index of [11, 13, 15, 12, 14, 16]) {
-            landmarks[index].y -= 0.2;
-        }
-        feed(detector, landmarks, time, 6);
-        time += 600;
-    }
-
-    assert.equal(detector.count, 0);
-    assert.match(detector.feedback, /Can't see arm/);
-});
-
 test("push-up detector counts with only one visible arm", () => {
     const detector = new PushUpDetector();
     let time = 0;
@@ -383,19 +408,17 @@ test("push-up detector retains its phase through brief elbow occlusion only", ()
     assert.equal(detector.count, 0);
 });
 
-test("push-up detector debounces bottom and return transitions for 35ms", () => {
+test("push-up detector counts immediately at lockout without recounting a hold", () => {
     const detector = new PushUpDetector();
     detector.update(pushUpPose(180), 0);
     detector.update(pushUpPose(180), 120);
     assert.equal(detector.state, "starting");
 
     detector.update(pushUpPose(90), 130);
-    detector.update(pushUpPose(90), 164);
-    assert.equal(detector.state, "starting");
-    detector.update(pushUpPose(90), 165);
     assert.equal(detector.state, "bottom");
 
     detector.update(pushUpPose(180), 170);
+    assert.equal(detector.count, 1);
     detector.update(pushUpPose(180), 205);
     assert.equal(detector.count, 1);
 });

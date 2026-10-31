@@ -110,13 +110,13 @@
 
 .settings-danger-zone h2 {
     margin: 0 0 1rem;
-    color: #ff6b6b;
+    color: #ff2800;
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     text-decoration: underline;
-    text-decoration-color: #ff0000;
+    text-decoration-color: #ff2800;
     text-decoration-thickness: 1px;
     text-underline-offset: 0.35rem;
 }
@@ -125,7 +125,7 @@
     display: inline-block;
     padding: 0;
     border: 0;
-    color: #ff0000;
+    color: #ff2800;
     background: transparent;
     font: inherit;
     font-size: 0.9rem;
@@ -134,7 +134,7 @@
 }
 
 :root body .settings-delete-button {
-    color: #ff0000;
+    color: #ff2800;
 }
 
 .settings-delete-button:hover {
@@ -157,4 +157,3 @@
     color: var(--text-muted);
     font-size: 0.75rem;
 }
-

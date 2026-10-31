@@ -165,6 +165,7 @@
             <div class="exercise-monitor">
 
                 <p id="monitorFeedback" aria-live="polite">Loading AI.</p>
+                <p class="monitor-ai-disclaimer">Frames and light can affect counting</p>
 
                 <div class="monitor-heading">
                     <span id="monitorStatus" class="monitor-status" role="status" aria-live="polite">Ready</span>
