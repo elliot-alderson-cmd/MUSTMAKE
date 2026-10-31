@@ -144,7 +144,6 @@ if (signupForm && signupOtpForm) {
     signupForm.addEventListener("submit", async (event) => {
         event.preventDefault();
 
-        const name = document.getElementById("name").value.trim();
         const username = document.getElementById("username").value.trim();
         const email = document.getElementById("email").value.trim().toLowerCase();
         const password = document.getElementById("password").value;
@@ -155,7 +154,6 @@ if (signupForm && signupOtpForm) {
 
         try {
             const result = await postAuth("/api/auth/send-otp", {
-                name,
                 username,
                 email,
                 password,
@@ -203,7 +201,6 @@ if (signupForm && signupOtpForm) {
                 purpose: "signup"
             });
 
-            setSignupMessage("Email verified. Signing you in...");
             saveSession(data);
         } catch (error) {
             console.error(error);

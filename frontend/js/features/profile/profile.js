@@ -253,15 +253,13 @@ async function saveProfileValue() {
 
     profileValueSaving = true;
     saveProfileValueButton.disabled = true;
-    const saveToast = window.showToast("Saving profile change…", { type: "loading" });
     try {
         await updateProfile({ [activeProfileValue]: value });
         profileValueSaving = false;
-        saveToast?.update("Profile updated successfully.", { type: "success" });
         closeProfileValueDialog();
     } catch (error) {
         console.error(`Profile ${activeProfileValue} update error:`, error);
-        saveToast?.update(error.message || "Could not update profile.", { type: "error" });
+        window.showToast(error.message || "Could not update profile.", { type: "error" });
     } finally {
         profileValueSaving = false;
         saveProfileValueButton.disabled = false;

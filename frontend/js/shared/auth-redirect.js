@@ -1,6 +1,4 @@
 window.redirectAfterAuthentication = function (user) {
-    window.queueToast?.("Signed in successfully.", "success");
-
     try {
         const pendingWorkout = JSON.parse(
             sessionStorage.getItem("mustmake_pending_workout") || "null"

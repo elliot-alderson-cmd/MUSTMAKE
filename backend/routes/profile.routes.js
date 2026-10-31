@@ -5,6 +5,7 @@ const profileController = require("../controllers/profile.controller");
 const router = express.Router();
 
 router.get("/api/profile", auth, profileController.getProfile);
+router.put("/api/profile/first-details", auth, profileController.completeFirstDetails);
 router.put("/api/profile", auth, profileController.updateProfile);
 router.delete("/api/account", auth, profileController.deleteAccount);
 

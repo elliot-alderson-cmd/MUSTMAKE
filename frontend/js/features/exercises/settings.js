@@ -32,10 +32,9 @@ toggle.addEventListener("change", () => {
         toggle.checked = getCameraMirrorPreference();
     }
 
-    window.showToast(
-        saved ? "Camera preference saved." : "Could not save camera preference.",
-        { type: saved ? "success" : "error" }
-    );
+    if (!saved) {
+        window.showToast("Could not save camera preference.", { type: "error" });
+    }
 });
 
 smartCameraToggle.checked = getSmartCameraModePreference();
@@ -47,10 +46,9 @@ smartCameraToggle.addEventListener("change", () => {
         smartCameraToggle.checked = getSmartCameraModePreference();
     }
 
-    window.showToast(
-        saved ? "Smart scrolling camera preference saved." : "Could not save smart camera preference.",
-        { type: saved ? "success" : "error" }
-    );
+    if (!saved) {
+        window.showToast("Could not save smart camera preference.", { type: "error" });
+    }
 });
 
 deleteAccountButton.addEventListener("click", async () => {

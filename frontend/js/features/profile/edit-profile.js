@@ -12,6 +12,7 @@ function logout() {
 const profilePictureInput = document.getElementById("profilePicture");
 const photoPreview = document.getElementById("photoPreview");
 const ageInput = document.getElementById("age");
+const nameInput = document.getElementById("name");
 const socialLinksContainer = document.getElementById("social-links-container");
 const addSocialLinkButton = document.getElementById("add-social-link");
 const socialLinksCount = document.getElementById("social-links-count");
@@ -101,6 +102,10 @@ async function loadProfile() {
 
         const user = data.user;
 
+        if (nameInput) {
+            nameInput.value = user.name === user.username ? "" : user.name || "";
+        }
+
         ageInput.value = user.age ?? "";
 
         document.getElementById("height").value = user.height || "";
@@ -139,14 +144,21 @@ const profileForm = document.getElementById("profileForm");
 profileForm.addEventListener("submit", async event => {
     event.preventDefault();
 
-    const saveToast = window.showToast("Saving profile…", { type: "loading" });
-
     try {
+        const name = nameInput?.value.trim();
+        if (nameInput && (!name || name.length > 100)) {
+            throw new Error("Please enter a name between 1 and 100 characters.");
+        }
+
         const payload = {
             age: ageInput.value,
             height: document.getElementById("height").value,
             weight: document.getElementById("weight").value
         };
+
+        if (nameInput) {
+            payload.name = name;
+        }
 
         if (socialLinksContainer) {
             const socialLinks = [];
@@ -170,7 +182,10 @@ profileForm.addEventListener("submit", async event => {
             });
         }
 
-        const response = await fetch(`${window.API_URL}/api/profile`, {
+        const profileEndpoint = nameInput
+            ? "/api/profile/first-details"
+            : "/api/profile";
+        const response = await fetch(`${window.API_URL}${profileEndpoint}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -191,15 +206,13 @@ profileForm.addEventListener("submit", async event => {
         }
 
         localStorage.setItem("user", JSON.stringify(data.user));
-        saveToast?.dismiss();
-        window.queueToast("Profile saved successfully.", "success");
 
         setTimeout(() => {
             window.location.href = "/today";
         }, 700);
     } catch (error) {
         console.error(error);
-        saveToast?.update(error.message || "Could not save profile.", { type: "error" });
+        window.showToast(error.message || "Could not save profile.", { type: "error" });
     }
 });
 

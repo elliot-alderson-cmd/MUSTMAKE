@@ -27,15 +27,28 @@
 
             <section>
                 <div class="card-heading">
-                    <p id="setupFormTitle">This is optional ,click continue if you don't want to enter</p>
+                    <p id="setupFormTitle">Your name is required. The other profile details are optional.</p>
                 
                 </div>
 
                 <form id="profileForm" class="setup-form">
 
+                    <div class="setup-field">
+                        <label for="name">Name</label>
+                        <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            maxlength="100"
+                            autocomplete="name"
+                            placeholder="Your name"
+                            required
+                        >
+                    </div>
+
 <div class="setup-field">
     <label for="age">
-        Age <span class="optional-label">Optional</span>
+        Age
     </label>
 
     <input
@@ -67,7 +80,7 @@
                     </div>
 
                     <div class="setup-field photo-field">
-                        <label for="profilePicture">Profile photo <span class="optional-label">Optional</span></label>
+                        <label for="profilePicture">Profile photo </label>
                         <div class="photo-control">
                             <div class="photo-preview-wrap">
                                 <svg class="photo-placeholder" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -85,7 +98,7 @@
 
                     <details class="socials-details">
                         <summary>
-                            <span>Social links <span>Optional</span></span>
+                            <span>Social links </span>
                         </summary>
                         <div class="socials-content">
                             <div class="socials-grid social-links-field">

@@ -43,7 +43,7 @@ const getProfile = async (req, res) => {
         }
     };
 
-const updateProfile = async (req, res) => {
+const saveProfile = async (req, res, requireName = false) => {
         try {
             await connectDB();
 
@@ -60,10 +60,14 @@ const updateProfile = async (req, res) => {
                 socials
             } = req.body;
 
+            if (requireName && name === undefined) {
+                return res.status(400).json({ message: "Name is required." });
+            }
+
             let normalizedName;
             if (name !== undefined) {
                 if (typeof name !== "string" || !name.trim() || name.trim().length > 100) {
-                    return res.status(400).json({ message: "Name must contain 1 to 100 characters." });
+                    return res.status(400).json({ message: "Please enter a name between 1 and 100 characters." });
                 }
                 normalizedName = name.trim();
             }
@@ -228,6 +232,9 @@ const updateProfile = async (req, res) => {
         }
     };
 
+const updateProfile = (req, res) => saveProfile(req, res);
+const completeFirstDetails = (req, res) => saveProfile(req, res, true);
+
 const deleteAccount = async (req, res) => {
     try {
         await connectDB();
@@ -271,5 +278,6 @@ const deleteAccount = async (req, res) => {
 module.exports = {
     getProfile,
     updateProfile,
+    completeFirstDetails,
     deleteAccount
 };

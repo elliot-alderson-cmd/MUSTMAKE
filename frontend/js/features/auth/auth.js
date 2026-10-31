@@ -329,7 +329,6 @@ if (otpLoginVerifyForm) {
                 otp,
                 purpose: "login"
             });
-            setOtpStatus("Code verified. Signing you in...");
             finishLogin(data);
         } catch (error) {
             console.error(error);

@@ -200,22 +200,14 @@ const sendOtp = async (req, res) => {
 
             if (purpose === "signup") {
                 hasSignupFields =
-                    typeof body.name === "string" ||
                     typeof body.username === "string" ||
                     typeof body.password === "string";
 
                 if (hasSignupFields) {
-                    const name = typeof body.name === "string" ? body.name.trim() : "";
                     const username = typeof body.username === "string"
                         ? body.username.trim().toLowerCase()
                         : "";
                     const password = typeof body.password === "string" ? body.password : "";
-
-                    if (!name || name.length > 100) {
-                        return res.status(400).json({
-                            message: "Name must contain 1 to 100 characters."
-                        });
-                    }
 
                     if (!/^[a-z0-9_]{3,30}$/.test(username)) {
                         return res.status(400).json({
@@ -230,7 +222,6 @@ const sendOtp = async (req, res) => {
                     }
 
                     signupData = {
-                        name,
                         username,
                         passwordHash: await bcrypt.hash(password, 12)
                     };
@@ -550,7 +541,7 @@ const verifyOtp = async (req, res) => {
             if (purpose === "signup") {
                 try {
                     user = await User.create({
-                        name: consumedOTP.signupData.name,
+                        name: consumedOTP.signupData.username,
                         username: consumedOTP.signupData.username,
                         email: cleanEmail,
                         passwordHash: consumedOTP.signupData.passwordHash
