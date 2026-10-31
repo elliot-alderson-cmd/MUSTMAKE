@@ -196,11 +196,8 @@ export function mountAiMonitor(
     const context = canvas.getContext("2d");
     const detector = createExerciseDetector(exercise.slug);
     const listeners = new AbortController();
-    const repSound = new Audio("/assets/nice_rep.mp3");
     const discardSound = new Audio("/assets/discardsession.mp3");
-    [repSound, discardSound].forEach(sound => {
-        sound.preload = "auto";
-    });
+    discardSound.preload = "auto";
 
     function applyCameraMirrorPreference() {
         preview.dataset.mirrored = String(getCameraMirrorPreference());
@@ -588,7 +585,6 @@ export function mountAiMonitor(
             : /^(Nice rep|Nice jump|Strong form|Great|Perfect)\b/i.test(nextMessage)
                 ? "positive"
                 : "negative";
-        playFeedbackSound(nextMessage);
         const now = performance.now();
         if (now - lastFeedbackAnimationAt < 350) return;
 
@@ -598,8 +594,12 @@ export function mountAiMonitor(
         feedback.classList.add("is-animating");
     }
 
-    function playFeedbackSound(message) {
-        if (message === "Nice rep.") playSound(repSound, "rep");
+    function playRepSound() {
+        if (!soundEnabled) return;
+        const sound = new Audio("/assets/nice_rep.mp3");
+        sound.play().catch(error => {
+            console.warn("Could not play the rep sound.", error);
+        });
     }
 
     function playSound(sound, label) {
@@ -912,6 +912,7 @@ export function mountAiMonitor(
 
         drawPose(landmarks);
 
+        const previousCount = rawCount;
         const result = detector.update(
             landmarks,
             performance.now()
@@ -925,6 +926,9 @@ export function mountAiMonitor(
 
             if (countOutput) {
                 countOutput.textContent = String(rawCount);
+            }
+            if (rawCount > previousCount) {
+                playRepSound();
             }
         }
 
