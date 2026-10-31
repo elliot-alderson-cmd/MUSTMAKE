@@ -586,7 +586,6 @@
 
                 clearPendingWorkout();
                 form.reset();
-                window.queueToast?.("Workout saved.", "success");
                 window.location.replace("/today");
             } catch (error) {
                 console.error("Save workout error:", error);

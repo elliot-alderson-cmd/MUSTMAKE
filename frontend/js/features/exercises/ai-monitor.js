@@ -281,6 +281,14 @@ export function mountAiMonitor(
         preview.style.height = `${rect.height}px`;
     }
 
+    function getPreviewTransform(from, to) {
+        const scaleX = from.width / to.width;
+        const scaleY = from.height / to.height;
+        const offsetX = from.left - to.left;
+        const offsetY = from.top - to.top;
+        return `translate(${offsetX}px, ${offsetY}px) scale(${scaleX}, ${scaleY})`;
+    }
+
     function updateSmartCameraPreview() {
         preview.dataset.smartCameraMode = String(smartCameraEnabled);
 
@@ -305,6 +313,7 @@ export function mountAiMonitor(
         clearTimeout(previewTransitionTimer);
         previewTransitionTimer = null;
         previewTransitioning = false;
+        preview.style.removeProperty("transform");
 
         if (previewTargetFullscreen) {
             preview.classList.add("smart-camera-visible");
@@ -330,54 +339,94 @@ export function mountAiMonitor(
     function transitionPreview(fullscreen) {
         if (previewTargetFullscreen === fullscreen) return;
 
+        if (!fullscreen) {
+            previewTargetFullscreen = false;
+            previewTransitionGeneration += 1;
+            const generation = previewTransitionGeneration;
+            clearTimeout(previewTransitionTimer);
+            previewTransitionTimer = null;
+            previewTransitioning = true;
+            document.body.classList.remove("smart-camera-fullscreen");
+            updateSmartCameraPreview();
+            finishPreviewTransition(generation);
+            return;
+        }
+
         const current = preview.getBoundingClientRect();
         if (!current.width || !current.height) return;
 
         previewTargetFullscreen = fullscreen;
-        if (!fullscreen) {
-            preview.classList.remove("smart-camera-visible");
-        }
-        updateSmartCameraPreview();
         previewTransitionGeneration += 1;
         const generation = previewTransitionGeneration;
         clearTimeout(previewTransitionTimer);
         previewTransitioning = true;
+        updateSmartCameraPreview();
 
         preview.style.transition = "none";
+        preview.style.transform = "none";
+        setPreviewGeometry(current);
         if (!previewFixed) {
             preview.classList.add("is-fixed");
             previewFixed = true;
             document.body.append(preview);
         }
-        setPreviewGeometry(current);
+        void preview.offsetWidth;
+
+        preview.style.transition =
+            "border-radius 360ms ease, border-color 300ms ease, box-shadow 300ms ease";
+        if (fullscreen) preview.classList.add("smart-camera-visible");
+        if (fullscreen) preview.classList.add("is-fullscreen");
+        const target = getFullscreenPreviewGeometry();
+        setPreviewGeometry(target);
+        preview.style.transform = getPreviewTransform(current, target);
+        void preview.offsetWidth;
+        preview.style.removeProperty("transition");
         void preview.offsetWidth;
 
         requestAnimationFrame(() => {
             if (disposed || generation !== previewTransitionGeneration) return;
-
-            preview.style.removeProperty("transition");
-            preview.classList.toggle("is-fullscreen", fullscreen);
-            setPreviewGeometry(fullscreen
-                ? getFullscreenPreviewGeometry()
-                : previewSlot.getBoundingClientRect());
-
-            previewTransitionTimer = window.setTimeout(
-                () => finishPreviewTransition(generation),
-                360
-            );
+            preview.style.removeProperty("transform");
         });
+
+        previewTransitionTimer = window.setTimeout(
+            () => finishPreviewTransition(generation),
+            420
+        );
+    }
+
+    function retargetPreviewGeometry(target) {
+        if (!previewFixed || !previewTransitioning) return;
+        const generation = previewTransitionGeneration;
+        const current = preview.getBoundingClientRect();
+        preview.style.transition = "none";
+        preview.style.transform = "none";
+        setPreviewGeometry(current);
+        void preview.offsetWidth;
+        setPreviewGeometry(target);
+        preview.style.transform = getPreviewTransform(current, target);
+        void preview.offsetWidth;
+        preview.style.removeProperty("transition");
+        void preview.offsetWidth;
+        requestAnimationFrame(() => {
+            if (
+                disposed ||
+                generation !== previewTransitionGeneration ||
+                !previewTransitioning
+            ) {
+                return;
+            }
+            preview.style.removeProperty("transform");
+        });
+        clearTimeout(previewTransitionTimer);
+        previewTransitionTimer = window.setTimeout(
+            () => finishPreviewTransition(generation),
+            420
+        );
     }
 
     function retargetExpandedPreview() {
-        if (!previewFixed || previewTargetFullscreen || !previewTransitioning) return;
-
-        setPreviewGeometry(previewSlot.getBoundingClientRect());
-        clearTimeout(previewTransitionTimer);
-        const generation = previewTransitionGeneration;
-        previewTransitionTimer = window.setTimeout(
-            () => finishPreviewTransition(generation),
-            360
-        );
+        if (previewTargetFullscreen) return;
+        retargetPreviewGeometry(previewSlot.getBoundingClientRect());
     }
 
     function restoreSmartOverlayNodes() {
@@ -443,7 +492,7 @@ export function mountAiMonitor(
     function handlePreviewTransitionEnd(event) {
         if (
             event.target === preview &&
-            ["width", "height"].includes(event.propertyName)
+            event.propertyName === "transform"
         ) {
             finishPreviewTransition(previewTransitionGeneration);
         }
@@ -451,9 +500,11 @@ export function mountAiMonitor(
 
     function handleWindowResize() {
         if (previewFixed && previewTargetFullscreen) {
-            if (!previewTransitioning) preview.style.transition = "none";
-            setPreviewGeometry(getFullscreenPreviewGeometry());
-            if (!previewTransitioning) {
+            if (previewTransitioning) {
+                retargetPreviewGeometry(getFullscreenPreviewGeometry());
+            } else {
+                preview.style.transition = "none";
+                setPreviewGeometry(getFullscreenPreviewGeometry());
                 void preview.offsetWidth;
                 preview.style.removeProperty("transition");
             }
@@ -461,6 +512,21 @@ export function mountAiMonitor(
             retargetExpandedPreview();
         }
         resizeCanvas();
+    }
+
+    function handleVisualViewportScroll() {
+        // Scrolling the visual viewport is part of the gesture that closes
+        // smart camera. Retargeting here restarts the collapse every frame,
+        // which can leave the preview hanging halfway on mobile browsers.
+        if (!previewFixed || !previewTargetFullscreen || previewTransitioning) {
+            return;
+        }
+
+        preview.style.transition = "none";
+        setPreviewGeometry(getFullscreenPreviewGeometry());
+        resizeCanvas();
+        void preview.offsetWidth;
+        preview.style.removeProperty("transition");
     }
 
     monitor.dataset.smartCameraMode = "false";
@@ -1475,7 +1541,7 @@ export function mountAiMonitor(
         signal: listeners.signal
     });
 
-    window.visualViewport?.addEventListener("scroll", handleWindowResize, {
+    window.visualViewport?.addEventListener("scroll", handleVisualViewportScroll, {
         signal: listeners.signal
     });
 
