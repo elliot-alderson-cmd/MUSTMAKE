@@ -1,4 +1,4 @@
-/* base-layout.css */
+/* Base layout */
 
 * {
     box-sizing: border-box;
@@ -203,7 +203,7 @@ a {
     margin-top: 12px;
 
 }
-/* activity.css */
+/* Activity */
 /* TODAY PAGE */
 
 .people-grid {
@@ -491,7 +491,7 @@ textarea {
     margin-bottom: 8px;
 }
 
-/* competition.css */
+/* Competition */
 /* COMPETITION */
 
 .competition-search,
@@ -974,7 +974,7 @@ textarea {
     margin: 8px 0 0;
 }
 
-/* authentication.css */
+/* Authentication */
 /* LOGIN / SIGNUP */
 
 .auth-page {
@@ -1280,7 +1280,7 @@ small {
     display: none !important;
 }
 
-/* visual-refinements.css */
+/* Visual refinements */
 /* PREMIUM GLASS REFINEMENTS */
 
 .competition-search,
@@ -1449,7 +1449,7 @@ small,
     }
 
 }
-/* typography.css */
+/* Typography */
 /* INTER TYPOGRAPHY SYSTEM */
 
 
@@ -1774,7 +1774,7 @@ textarea:focus-visible {
         min-width: 0;
     }
 }
-/* canvas-motion.css */
+/* Canvas motion */
 /* MINIMAL CANVAS & QUIET MOTION */
 
 
@@ -2312,7 +2312,7 @@ textarea:focus {
         max-width: 100%;
     }
 }
-/* onboarding.css */
+/* Onboarding */
 /* FIRST-TIME PROFILE SETUP */
 
 #firstSetupPage {
@@ -2969,7 +2969,7 @@ textarea:focus {
         font-size: 12px;
     }
 }
-/* people-search.css */
+/* People search */
 /* ALWAYS VISIBLE PEOPLE SEARCH */
 
 .search-control {
@@ -3432,7 +3432,7 @@ textarea:focus {
         margin-bottom: 34px;
     }
 }
-/* navigation-auth.css */
+/* Navigation and authentication */
 /* GOOGLE OAUTH BUTTON */
 
 .auth-content a.google-oauth-button {
@@ -3657,7 +3657,7 @@ body {
     }
 }
 
-/* exercise-library.css */
+/* Exercise library */
 /* PUBLIC EXERCISE LIBRARY */
 /* Exercise demonstration videos */
 .exercise-demo {
@@ -4102,7 +4102,7 @@ body.app-page .exercise-library-page .exercise-card h3 {
     .mobile-nav-panel,
     .mobile-nav-backdrop { transition-duration: 0.01ms; }
 }
-/* responsive-refinements.css */
+/* Responsive refinements */
 /* Consistent surface refinements across viewport sizes */
 html,
 body {

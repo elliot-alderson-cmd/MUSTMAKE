@@ -3,12 +3,78 @@
 
     const DEFAULT_DURATION = 3600;
     const PENDING_TOAST_KEY = "mustmake_pending_toast";
+    const PENDING_FINISH_SOUND_KEY = "mustmake_pending_finish_sound";
+    const EXERCISE_SOUND_KEY_PREFIX = "mustmake_exercise_sound:";
+    const toastSound = new Audio("/assets/toaster.mp3");
+    const finishSound = new Audio("/assets/finishsession.mp3");
+    toastSound.preload = "auto";
+    finishSound.preload = "auto";
     const icons = {
         success: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>',
         error: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>',
         warning: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.8 19h18.4L12 3Z"/><path d="M12 9v4m0 3h.01"/></svg>',
         info: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg>'
     };
+
+    function playToastSound() {
+        if (!getExerciseSoundPreference()) return;
+
+        toastSound.currentTime = 0;
+        toastSound.play().catch(error => {
+            console.warn("Could not play the notification sound.", error);
+        });
+    }
+
+    function getExerciseSoundPreference() {
+        try {
+            let user = null;
+            try {
+                user = JSON.parse(localStorage.getItem("user") || "null");
+            } catch {
+                // Use the separate guest preference when account data is unavailable.
+            }
+            const identity = user?._id ?? user?.id ?? user?.email ?? user?.username;
+            const userKey = identity == null
+                ? "guest"
+                : String(identity).trim().toLowerCase();
+            return localStorage.getItem(
+                `${EXERCISE_SOUND_KEY_PREFIX}${encodeURIComponent(userKey)}`
+            ) !== "false";
+        } catch {
+            return true;
+        }
+    }
+
+    function playPendingFinishSound() {
+        try {
+            if (sessionStorage.getItem(PENDING_FINISH_SOUND_KEY) !== "true") return;
+            sessionStorage.removeItem(PENDING_FINISH_SOUND_KEY);
+        } catch (error) {
+            console.warn("Could not read the pending session finish sound.", error);
+            return;
+        }
+
+        if (!getExerciseSoundPreference()) return;
+
+        finishSound.currentTime = 0;
+        finishSound.play().catch(error => {
+            if (error?.name !== "NotAllowedError") {
+                console.warn("Could not play the session finish sound.", error);
+                return;
+            }
+
+            const resumeOnInteraction = () => {
+                document.removeEventListener("pointerdown", resumeOnInteraction);
+                document.removeEventListener("keydown", resumeOnInteraction);
+                if (!getExerciseSoundPreference()) return;
+                finishSound.play().catch(playError => {
+                    console.warn("Could not play the session finish sound.", playError);
+                });
+            };
+            document.addEventListener("pointerdown", resumeOnInteraction, { once: true });
+            document.addEventListener("keydown", resumeOnInteraction, { once: true });
+        });
+    }
 
     function getToastRoot() {
         let root = document.querySelector(".toast-viewport");
@@ -111,6 +177,9 @@
             toast.dataset.type = type;
             toast.setAttribute("role", type === "error" ? "alert" : "status");
             text.textContent = String(nextMessage ?? "");
+            if (type !== "loading") {
+                playToastSound();
+            }
             icon.classList.toggle("is-loading", type === "loading");
             icon.innerHTML = type === "loading"
                 ? '<span class="toast-spinner"></span>'
@@ -144,6 +213,7 @@
     }
 
     function showQueuedToast() {
+        playPendingFinishSound();
         try {
             const pending = JSON.parse(sessionStorage.getItem(PENDING_TOAST_KEY) || "null");
             sessionStorage.removeItem(PENDING_TOAST_KEY);

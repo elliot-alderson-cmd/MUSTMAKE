@@ -326,7 +326,7 @@ body.smart-camera-fullscreen > :not(.monitor-preview) {
     background: transparent;
     box-shadow: none;
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 800;
     line-height: 1.2;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95);
 }
@@ -407,7 +407,7 @@ body.smart-camera-fullscreen > :not(.monitor-preview) {
     left: auto;
     width: min(420px, calc(100% - 28px));
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 800;
     line-height: 1.25;
     text-align: right;
     transform: none;
@@ -542,7 +542,7 @@ body.smart-camera-fullscreen > :not(.monitor-preview) {
     margin: 0 0 8px;
     color: #ff6b73;
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 800;
     line-height: 1.4;
 }
 

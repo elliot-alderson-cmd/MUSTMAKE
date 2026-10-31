@@ -2,11 +2,14 @@ import {
     getCameraMirrorPreference,
     setCameraMirrorPreference,
     getSmartCameraModePreference,
-    setSmartCameraModePreference
+    setSmartCameraModePreference,
+    getExerciseSoundPreference,
+    setExerciseSoundPreference
 } from "./camera-preference.js";
 
 const toggle = document.getElementById("cameraMirrorToggle");
 const smartCameraToggle = document.getElementById("smartCameraToggle");
+const exerciseSoundToggle = document.getElementById("exerciseSoundToggle");
 const dangerZone = document.getElementById("dangerZone");
 const deleteAccountButton = document.getElementById("deleteAccountButton");
 
@@ -48,6 +51,17 @@ smartCameraToggle.addEventListener("change", () => {
 
     if (!saved) {
         window.showToast("Could not save smart camera preference.", { type: "error" });
+    }
+});
+
+exerciseSoundToggle.checked = getExerciseSoundPreference();
+
+exerciseSoundToggle.addEventListener("change", () => {
+    const saved = setExerciseSoundPreference(exerciseSoundToggle.checked);
+
+    if (!saved) {
+        exerciseSoundToggle.checked = getExerciseSoundPreference();
+        window.showToast("Could not save exercise sound preference.", { type: "error" });
     }
 });
 

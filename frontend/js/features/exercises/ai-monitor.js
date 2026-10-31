@@ -5,7 +5,10 @@ import {
     getCameraMirrorPreference,
     getCameraMirrorPreferenceKey,
     getSmartCameraModePreference,
-    getSmartCameraModePreferenceKey
+    getSmartCameraModePreferenceKey,
+    EXERCISE_SOUND_CHANGE_EVENT,
+    getExerciseSoundPreference,
+    getExerciseSoundPreferenceKey
 } from "./camera-preference.js";
 
 const MEDIAPIPE_VERSION = "1.1.1";
@@ -193,6 +196,11 @@ export function mountAiMonitor(
     const context = canvas.getContext("2d");
     const detector = createExerciseDetector(exercise.slug);
     const listeners = new AbortController();
+    const repSound = new Audio("/assets/nice_rep.mp3");
+    const discardSound = new Audio("/assets/discardsession.mp3");
+    [repSound, discardSound].forEach(sound => {
+        sound.preload = "auto";
+    });
 
     function applyCameraMirrorPreference() {
         preview.dataset.mirrored = String(getCameraMirrorPreference());
@@ -209,6 +217,7 @@ export function mountAiMonitor(
     let lastInferenceAt = 0;
     let lastTimestamp = 0;
     let lastFeedbackAnimationAt = -Infinity;
+    let soundEnabled = getExerciseSoundPreference();
     let smartCameraEnabled = false;
     let smartScrollArmed = false;
     let lastScrollPosition = 0;
@@ -233,6 +242,7 @@ export function mountAiMonitor(
     );
 
     let saveInFlight = false;
+    let discardInProgress = false;
     let cameraEnded = false;
 
     let sessionStarted = Boolean(
@@ -578,6 +588,7 @@ export function mountAiMonitor(
             : /^(Nice rep|Nice jump|Strong form|Great|Perfect)\b/i.test(nextMessage)
                 ? "positive"
                 : "negative";
+        playFeedbackSound(nextMessage);
         const now = performance.now();
         if (now - lastFeedbackAnimationAt < 350) return;
 
@@ -585,6 +596,32 @@ export function mountAiMonitor(
         feedback.classList.remove("is-animating");
         void feedback.offsetWidth;
         feedback.classList.add("is-animating");
+    }
+
+    function playFeedbackSound(message) {
+        if (message === "Nice rep.") playSound(repSound, "rep");
+    }
+
+    function playSound(sound, label) {
+        if (!soundEnabled) return Promise.resolve();
+
+        sound.currentTime = 0;
+        return new Promise(resolve => {
+            const finish = () => {
+                sound.removeEventListener("ended", finish);
+                resolve();
+            };
+            sound.addEventListener("ended", finish, { once: true });
+            const handlePlaybackError = error => {
+                console.warn(`Could not play the ${label} sound.`, error);
+                finish();
+            };
+            try {
+                sound.play().catch(handlePlaybackError);
+            } catch (error) {
+                handlePlaybackError(error);
+            }
+        });
     }
 
     function setExerciseFeedback(message) {
@@ -1187,8 +1224,8 @@ export function mountAiMonitor(
         }
     }
 
-    function discardSession() {
-        if (!["finished", "saved"].includes(lifecycle)) {
+    async function discardSession() {
+        if (discardInProgress || !["finished", "saved"].includes(lifecycle)) {
             return;
         }
 
@@ -1200,6 +1237,8 @@ export function mountAiMonitor(
             return;
         }
 
+        discardInProgress = true;
+        await playSound(discardSound, "session discard");
         rawCount = 0;
         elapsedMs = 0;
         sessionStarted = false;
@@ -1414,7 +1453,13 @@ export function mountAiMonitor(
             window.clearPrivateCaches?.();
             onWorkoutSaved?.();
 
-            window.queueToast?.("Workout saved.", "success");
+            if (soundEnabled) {
+                try {
+                    sessionStorage.setItem("mustmake_pending_finish_sound", "true");
+                } catch (error) {
+                    console.warn("Could not queue the session finish sound.", error);
+                }
+            }
             window.location.replace("/today");
             return;
         } catch (error) {
@@ -1590,6 +1635,14 @@ export function mountAiMonitor(
     );
 
     window.addEventListener(
+        EXERCISE_SOUND_CHANGE_EVENT,
+        event => {
+            soundEnabled = Boolean(event.detail?.enabled);
+        },
+        { signal: listeners.signal }
+    );
+
+    window.addEventListener(
         "storage",
         event => {
             if (event.key === "user" || event.key === getCameraMirrorPreferenceKey()) {
@@ -1597,6 +1650,9 @@ export function mountAiMonitor(
             }
             if (event.key === "user" || event.key === getSmartCameraModePreferenceKey()) {
                 applySmartCameraPreference();
+            }
+            if (event.key === "user" || event.key === getExerciseSoundPreferenceKey()) {
+                soundEnabled = getExerciseSoundPreference();
             }
         },
         { signal: listeners.signal }
@@ -1642,8 +1698,6 @@ export function mountAiMonitor(
         );
 
         if (snapshot.saved) {
-            window.showToast("Workout saved.", { type: "success" });
-
             setStatus("saved", "Workout saved.");
         } else {
             setFeedback(

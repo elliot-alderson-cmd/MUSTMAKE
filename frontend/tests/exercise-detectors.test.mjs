@@ -49,40 +49,54 @@ function squatPose(angle) {
 
 function pushUpPose(angle) {
     const landmarks = pose();
-    const wristRotation = (180 - angle) * Math.PI / 180;
+    const shoulderDrop = Math.max(0, 180 - angle) / 90 * 0.032;
+    const armPoints = (shoulderX, shoulderY, wristX, wristY) => {
+        const dx = wristX - shoulderX;
+        const dy = wristY - shoulderY;
+        const length = Math.hypot(dx, dy);
+        const height = length / (2 * Math.tan(angle * Math.PI / 360));
+        return {
+            shoulder: { x: shoulderX, y: shoulderY },
+            elbow: {
+                x: (shoulderX + wristX) / 2 - dy / length * height,
+                y: (shoulderY + wristY) / 2 + dx / length * height
+            },
+            wrist: { x: wristX, y: wristY }
+        };
+    };
+    const leftArm = armPoints(0.25, 0.45 + shoulderDrop, 0.65, 0.5);
+    const rightArm = armPoints(0.25, 0.5 + shoulderDrop, 0.65, 0.55);
     const points = {
-        11: { x: 0.25, y: 0.5 },
-        13: { x: 0.45, y: 0.5 },
-        15: {
-            x: 0.45 + 0.2 * Math.cos(wristRotation),
-            y: 0.5 + 0.2 * Math.sin(wristRotation)
-        },
+        11: leftArm.shoulder,
+        13: leftArm.elbow,
+        15: leftArm.wrist,
+        12: rightArm.shoulder,
+        14: rightArm.elbow,
+        16: rightArm.wrist,
         23: { x: 0.55, y: 0.51 },
-        27: { x: 0.85, y: 0.52 }
+        24: { x: 0.55, y: 0.56 },
+        27: { x: 0.85, y: 0.52 },
+        28: { x: 0.85, y: 0.57 }
     };
     return setPoints(landmarks, points);
 }
 
 function frontFacingPushUpPose(angle) {
     const landmarks = pose();
-    const wristRotation = (180 - angle) * Math.PI / 180;
+    const elbowOffset = angle >= 180
+        ? 0
+        : 0.2 / Math.tan(angle * Math.PI / 360);
     return setPoints(landmarks, {
         11: { x: 0.4, y: 0.22 },
-        13: { x: 0.4, y: 0.42 },
-        15: {
-            x: 0.4 + 0.2 * Math.sin(wristRotation),
-            y: 0.42 + 0.2 * Math.cos(wristRotation)
-        },
+        13: { x: 0.4 + elbowOffset, y: 0.42 },
+        15: { x: 0.4, y: 0.62 },
         23: { x: 0.45, y: 0.52 },
-        27: { x: 0.48, y: 0.88 },
+        27: { x: 0.48, y: 0.67 },
         12: { x: 0.6, y: 0.22 },
-        14: { x: 0.6, y: 0.42 },
-        16: {
-            x: 0.6 - 0.2 * Math.sin(wristRotation),
-            y: 0.42 + 0.2 * Math.cos(wristRotation)
-        },
+        14: { x: 0.6 - elbowOffset, y: 0.42 },
+        16: { x: 0.6, y: 0.62 },
         24: { x: 0.55, y: 0.52 },
-        28: { x: 0.52, y: 0.88 }
+        28: { x: 0.52, y: 0.67 }
     });
 }
 
@@ -259,7 +273,7 @@ test("push-up detector counts a full cycle when facing the camera", () => {
     assert.equal(detector.count, 1);
 });
 
-test("push-up detector counts front-facing shallow reps with hips and feet out of frame", () => {
+test("push-up detector requires visible feet to verify hands are grounded", () => {
     const detector = new PushUpDetector();
     let time = 0;
     for (const angle of [155, 125, 155, 155]) {
@@ -271,10 +285,41 @@ test("push-up detector counts front-facing shallow reps with hips and feet out o
         time += 600;
     }
 
-    assert.equal(detector.count, 1);
+    assert.equal(detector.count, 0);
+    assert.match(detector.feedback, /Can't see arm/);
 });
 
-test("push-up detector pauses when the body landmarks are unreliable", () => {
+test("push-up detector rejects arm cycles when the hands are raised off the ground", () => {
+    const detector = new PushUpDetector();
+    let time = 0;
+    for (const angle of [180, 130, 90, 130, 180, 180]) {
+        const landmarks = frontFacingPushUpPose(angle);
+        for (const index of [11, 13, 15, 12, 14, 16]) {
+            landmarks[index].y -= 0.2;
+        }
+        feed(detector, landmarks, time, 6);
+        time += 600;
+    }
+
+    assert.equal(detector.count, 0);
+    assert.match(detector.feedback, /Can't see arm/);
+});
+
+test("push-up detector requires both hands to be visible", () => {
+    const detector = new PushUpDetector();
+    let time = 0;
+    for (const angle of [180, 130, 90, 130, 180, 180]) {
+        const landmarks = frontFacingPushUpPose(angle);
+        landmarks[16].visibility = 0.1;
+        feed(detector, landmarks, time, 6);
+        time += 600;
+    }
+
+    assert.equal(detector.count, 0);
+    assert.match(detector.feedback, /Can't see arm/);
+});
+
+test("push-up detector tracks using the visible arm when the other arm is unreliable", () => {
     const detector = new PushUpDetector();
     feed(detector, pushUpPose(180), 0);
     feed(detector, pushUpPose(130), 800);
@@ -283,7 +328,7 @@ test("push-up detector pauses when the body landmarks are unreliable", () => {
     unreliable[13].visibility = 0.1;
     detector.update(unreliable, 2400);
     assert.equal(detector.count, 0);
-    assert.match(detector.feedback, /not reliably visible/);
+    assert.notEqual(detector.state, "unknown");
 });
 
 test("both detectors count a faster full cycle without counting a hold twice", () => {
