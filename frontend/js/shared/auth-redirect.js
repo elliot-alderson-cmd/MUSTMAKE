@@ -1,4 +1,4 @@
-window.redirectAfterAuthentication = function (user) {
+function getPendingWorkoutPath() {
     try {
         const pendingWorkout = JSON.parse(
             sessionStorage.getItem("mustmake_pending_workout") || "null"
@@ -8,16 +8,23 @@ window.redirectAfterAuthentication = function (user) {
             ["manual", "ai"].includes(pendingWorkout.mode) &&
             pendingWorkout.payload &&
             typeof pendingWorkout.payload === "object") {
-            window.location.replace(`/exercises/${encodeURIComponent(pendingWorkout.slug)}`);
-            return;
+            return `/exercises/${encodeURIComponent(pendingWorkout.slug)}`;
         }
     } catch (error) {
         console.warn("Could not read the pending workout after sign-in.", error);
     }
 
+    return null;
+}
+
+window.redirectAfterAuthentication = function (user) {
     const destination = user?.age !== null && user?.age !== undefined
-        ? "/today"
+        ? getPendingWorkoutPath() || "/today"
         : "/first-details";
 
     window.location.replace(destination);
+};
+
+window.redirectAfterFirstDetails = function () {
+    window.location.replace(getPendingWorkoutPath() || "/today");
 };

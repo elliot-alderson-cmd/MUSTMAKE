@@ -208,6 +208,10 @@ profileForm.addEventListener("submit", async event => {
         localStorage.setItem("user", JSON.stringify(data.user));
 
         setTimeout(() => {
+            if (nameInput && typeof window.redirectAfterFirstDetails === "function") {
+                window.redirectAfterFirstDetails();
+                return;
+            }
             window.location.href = "/today";
         }, 700);
     } catch (error) {

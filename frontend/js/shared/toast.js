@@ -4,11 +4,14 @@
     const DEFAULT_DURATION = 3600;
     const PENDING_TOAST_KEY = "mustmake_pending_toast";
     const PENDING_FINISH_SOUND_KEY = "mustmake_pending_finish_sound";
+    const PENDING_DISCARD_SOUND_KEY = "mustmake_pending_discard_sound";
     const EXERCISE_SOUND_KEY_PREFIX = "mustmake_exercise_sound:";
     const toastSound = new Audio("/assets/toaster.mp3");
     const finishSound = new Audio("/assets/finishsession.mp3");
+    const discardSound = new Audio("/assets/discardsession.mp3");
     toastSound.preload = "auto";
     finishSound.preload = "auto";
+    discardSound.preload = "auto";
     const icons = {
         success: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>',
         error: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>',
@@ -45,21 +48,21 @@
         }
     }
 
-    function playPendingFinishSound() {
+    function playPendingSound(key, sound, label) {
         try {
-            if (sessionStorage.getItem(PENDING_FINISH_SOUND_KEY) !== "true") return;
-            sessionStorage.removeItem(PENDING_FINISH_SOUND_KEY);
+            if (sessionStorage.getItem(key) !== "true") return;
+            sessionStorage.removeItem(key);
         } catch (error) {
-            console.warn("Could not read the pending session finish sound.", error);
+            console.warn(`Could not read the pending ${label} sound.`, error);
             return;
         }
 
         if (!getExerciseSoundPreference()) return;
 
-        finishSound.currentTime = 0;
-        finishSound.play().catch(error => {
+        sound.currentTime = 0;
+        sound.play().catch(error => {
             if (error?.name !== "NotAllowedError") {
-                console.warn("Could not play the session finish sound.", error);
+                console.warn(`Could not play the ${label} sound.`, error);
                 return;
             }
 
@@ -67,8 +70,8 @@
                 document.removeEventListener("pointerdown", resumeOnInteraction);
                 document.removeEventListener("keydown", resumeOnInteraction);
                 if (!getExerciseSoundPreference()) return;
-                finishSound.play().catch(playError => {
-                    console.warn("Could not play the session finish sound.", playError);
+                sound.play().catch(playError => {
+                    console.warn(`Could not play the ${label} sound.`, playError);
                 });
             };
             document.addEventListener("pointerdown", resumeOnInteraction, { once: true });
@@ -177,7 +180,7 @@
             toast.dataset.type = type;
             toast.setAttribute("role", type === "error" ? "alert" : "status");
             text.textContent = String(nextMessage ?? "");
-            if (type !== "loading") {
+            if (type !== "loading" && nextMessage !== "Session discarded.") {
                 playToastSound();
             }
             icon.classList.toggle("is-loading", type === "loading");
@@ -213,7 +216,8 @@
     }
 
     function showQueuedToast() {
-        playPendingFinishSound();
+        playPendingSound(PENDING_FINISH_SOUND_KEY, finishSound, "session finish");
+        playPendingSound(PENDING_DISCARD_SOUND_KEY, discardSound, "session discard");
         try {
             const pending = JSON.parse(sessionStorage.getItem(PENDING_TOAST_KEY) || "null");
             sessionStorage.removeItem(PENDING_TOAST_KEY);
