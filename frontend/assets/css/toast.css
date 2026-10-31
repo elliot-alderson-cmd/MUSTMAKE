@@ -40,7 +40,7 @@
 }
 
 .mustmake-toast[data-type="error"] {
-    --toast-accent: #dc2626;
+    --toast-accent: #ff2800;
     --toast-tint: rgba(239, 68, 68, 0.13);
     --toast-spinner-track: rgba(239, 68, 68, 0.22);
 }

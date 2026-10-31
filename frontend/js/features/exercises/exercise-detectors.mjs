@@ -1,8 +1,10 @@
-const VISIBILITY_THRESHOLD = 0.4;
-const SMOOTHING_ALPHA = 0.5;
-const FAST_MOVEMENT_DELTA = 25;
-const FAST_MOVEMENT_ALPHA = 0.9;
+const VISIBILITY_THRESHOLD = 0.35;
+const SMOOTHING_ALPHA = 0.55;
+const FAST_MOVEMENT_DELTA = 22;
+const FAST_MOVEMENT_ALPHA = 0.85;
 const MIN_SEGMENT_LENGTH = 0.015;
+const DEFAULT_LOST_GRACE_MS = 450;
+const DEFAULT_MIN_REP_INTERVAL_MS = 550;
 
 const LANDMARKS = {
     left: { shoulder: 11, elbow: 13, wrist: 15, hip: 23, knee: 25, ankle: 27 },
@@ -11,93 +13,99 @@ const LANDMARKS = {
 
 export const SQUAT_THRESHOLDS = Object.freeze({
     visibility: VISIBILITY_THRESHOLD,
-    standing: 155,
-    descending: 145,
-    bottom: 105,
+    standing: 150,
+    descending: 140,
+    bottom: 115,
     ascending: 125,
     settleMs: 0,
-    establishMs: 250,
-    returnMs: 0
+    establishMs: 150,
+    returnMs: 0,
+    minRepIntervalMs: 600
 });
 
 export const PUSH_UP_THRESHOLDS = Object.freeze({
-    visibility: 0.35,
-    maxHandGroundDistance: 0.12,
-    starting: 145,
-    lowering: 130,
-    bottom: 108,
-    returning: 122,
-    minShoulderDropRatio: 0.08,
-    maxTorsoAngle: 55,
-    settleMs: 35,
+    visibility: 0.3,
+    starting: 140,
+    lowering: 128,
+    bottom: 115,
+    returning: 125,
+    minShoulderDropRatio: 0.05,
+    settleMs: 0,
     establishMs: 120,
-    returnMs: 35,
-    maxLostFramesGraceMs: 450
+    returnMs: 0,
+    maxLostFramesGraceMs: 500,
+    maxSideAngleDifference: 35,
+    minRepIntervalMs: 550
 });
 
 export const PLANK_THRESHOLDS = Object.freeze({
-    visibility: 0.45,
-    maxBodyLineAngle: 90,
-    maxHipDeviation: 0.18,
-    minBodyLength: 0.2,
-    minSupportArmAngle: 55,
-    maxFrameGapMs: 180
+    visibility: 0.35,
+    maxBodyLineAngle: 60,
+    maxHipDeviation: 0.24,
+    minBodyLength: 0.18,
+    minSupportArmAngle: 45,
+    maxFrameGapMs: 500
 });
 
 export const EXERCISE_THRESHOLDS = Object.freeze({
     "pull-ups": {
-        visibility: VISIBILITY_THRESHOLD,
-        start: 145,
-        active: 135,
-        bottom: 100,
-        return: 135,
+        visibility: 0.35,
+        start: 140,
+        active: 130,
+        bottom: 108,
+        return: 128,
         settleMs: 0,
-        establishMs: 160,
+        establishMs: 120,
         returnMs: 0,
+        minRepIntervalMs: 600,
         name: "pull-up"
     },
     "biceps-curls": {
-        visibility: 0.35,
-        start: 135,
-        active: 125,
-        bottom: 105,
+        visibility: 0.3,
+        start: 132,
+        active: 122,
+        bottom: 108,
         return: 120,
         settleMs: 0,
         establishMs: 100,
         returnMs: 0,
+        minRepIntervalMs: 500,
         name: "biceps curl"
     },
     "triceps-extension": {
-        visibility: 0.35,
-        start: 80,
-        active: 95,
-        bottom: 135,
-        return: 115,
+        visibility: 0.3,
+        start: 85,
+        active: 98,
+        bottom: 130,
+        return: 112,
         settleMs: 0,
         establishMs: 100,
         returnMs: 0,
+        minRepIntervalMs: 500,
         name: "triceps extension"
     },
     "shoulder-press": {
-        visibility: 0.35,
-        start: 105,
-        active: 115,
-        bottom: 140,
+        visibility: 0.3,
+        start: 110,
+        active: 118,
+        bottom: 136,
         return: 120,
         settleMs: 0,
         establishMs: 100,
         returnMs: 0,
+        minRepIntervalMs: 550,
         name: "shoulder press"
     },
     "lateral-raises": {
-        visibility: VISIBILITY_THRESHOLD,
-        start: 35,
-        active: 50,
-        bottom: 80,
-        return: 55,
+        visibility: 0.35,
+        start: 38,
+        active: 48,
+        bottom: 72,
+        return: 52,
         settleMs: 0,
-        establishMs: 160,
+        establishMs: 120,
         returnMs: 0,
+        minRepIntervalMs: 550,
         name: "lateral raise"
     }
 });
@@ -154,7 +162,7 @@ function smoothedAngle(previous, current) {
 }
 
 class RepDetector {
-    constructor(thresholds, initialLabel, lostTrackingLabel = "Can't see u.") {
+    constructor(thresholds, initialLabel = "Get set.", lostTrackingLabel = "Can't see u.") {
         this.thresholds = thresholds;
         this.initialLabel = initialLabel;
         this.lostTrackingLabel = lostTrackingLabel;
@@ -163,6 +171,7 @@ class RepDetector {
 
     reset(count = 0) {
         this.count = count;
+        this.lastRepAt = -Infinity;
         this.resetMovement();
     }
 
@@ -171,14 +180,36 @@ class RepDetector {
         this.filteredAngle = null;
         this.pendingState = null;
         this.pendingSince = 0;
+        this.lastSeenAt = null;
         this.feedback = this.initialLabel;
     }
 
-    loseTracking() {
+    loseTracking(now = null) {
+        const graceMs = this.thresholds?.maxLostFramesGraceMs ?? DEFAULT_LOST_GRACE_MS;
+        if (
+            now != null &&
+            this.lastSeenAt != null &&
+            now - this.lastSeenAt <= graceMs &&
+            this.state !== "unknown"
+        ) {
+            return false;
+        }
         this.state = "unknown";
         this.filteredAngle = null;
         this.pendingState = null;
         this.feedback = this.lostTrackingLabel;
+        return true;
+    }
+
+    completeRep(now) {
+        const minInterval = this.thresholds?.minRepIntervalMs ?? DEFAULT_MIN_REP_INTERVAL_MS;
+        if (now - this.lastRepAt < minInterval) {
+            return false;
+        }
+        this.count += 1;
+        this.lastRepAt = now;
+        this.feedback = "Nice rep.";
+        return true;
     }
 
     holdTransition(nextState, now, duration, onTransition) {
@@ -214,7 +245,7 @@ class RepDetector {
 
 export class SquatDetector extends RepDetector {
     constructor(thresholds = SQUAT_THRESHOLDS) {
-        super(thresholds, "Stand tall.", "Can't see legs.");
+        super(thresholds, "Get set.", "Can't see legs.");
     }
 
     update(landmarks, now = performance.now()) {
@@ -228,104 +259,57 @@ export class SquatDetector extends RepDetector {
             if (angle != null) angles.push(angle);
         }
         if (!angles.length) {
-            this.loseTracking();
-            return this.result(null);
+            this.loseTracking(now);
+            return this.result(this.filteredAngle);
         }
 
+        this.lastSeenAt = now;
         const angle = this.filteredAngle = smoothedAngle(this.filteredAngle, average(angles));
         const t = this.thresholds;
 
         if (this.state === "unknown") {
-            this.feedback = "Stand tall.";
+            this.feedback = "Get set.";
             if (angle >= t.standing) {
                 this.holdTransition("standing", now, t.establishMs, () => {
                     this.state = "standing";
-                    this.feedback = "Ready. Squat.";
                 });
             } else {
                 this.clearPending();
             }
-        } else if (this.state === "standing") {
-            this.feedback = "Squat down.";
+        } else if (this.state === "standing" || this.state === "descending") {
             if (angle <= t.bottom) {
                 this.pendingState = null;
                 this.state = "bottom";
-                this.feedback = "Stand up.";
             } else if (angle <= t.descending) {
-                this.holdTransition("descending", now, t.settleMs, () => {
-                    this.state = "descending";
-                    this.feedback = "Keep lowering.";
-                });
-            } else {
-                this.clearPending();
-            }
-        } else if (this.state === "descending") {
-            this.feedback = "Keep lowering.";
-            if (angle <= t.bottom) {
-                this.holdTransition("bottom", now, t.settleMs, () => {
-                    this.state = "bottom";
-                    this.feedback = "Stand up.";
-                });
+                this.state = "descending";
             } else if (angle >= t.standing) {
-                this.holdTransition("standing", now, t.settleMs, () => {
-                    this.state = "standing";
-                    this.feedback = "Go lower.";
-                });
-            } else {
-                this.clearPending();
-            }
-        } else if (this.state === "bottom") {
-            this.feedback = "Stand up.";
-            if (angle >= t.standing) {
-                this.pendingState = null;
-                this.count += 1;
                 this.state = "standing";
-                this.feedback = "Nice rep.";
-            } else if (angle >= t.ascending) {
-                this.holdTransition("ascending", now, t.settleMs, () => {
-                    this.state = "ascending";
-                    this.feedback = "Push up.";
-                });
-            } else {
-                this.clearPending();
             }
-        } else if (this.state === "ascending") {
-            this.feedback = "Push up.";
+        } else if (this.state === "bottom" || this.state === "ascending") {
             if (angle >= t.standing) {
                 this.holdTransition("standing", now, t.returnMs, () => {
-                    this.count += 1;
                     this.state = "standing";
-                    this.feedback = "Nice rep.";
+                    this.completeRep(now);
                 });
+            } else if (angle >= t.ascending) {
+                this.state = "ascending";
             } else if (angle <= t.bottom) {
-                this.holdTransition("bottom", now, t.settleMs, () => {
-                    this.state = "bottom";
-                    this.feedback = "Stand up.";
-                });
-            } else {
-                this.clearPending();
+                this.state = "bottom";
             }
         }
+
         return this.result(angle);
     }
 }
 
 export class PushUpDetector extends RepDetector {
     constructor(thresholds = PUSH_UP_THRESHOLDS) {
-        super(thresholds, "Get in plank.", "Can't see arm.");
-        this.lastSeenAt = null;
-        this.startShoulderWristY = null;
-    }
-
-    reset(count = 0) {
-        super.reset(count);
-        this.lastSeenAt = null;
+        super(thresholds, "Get set.", "Can't see arm.");
         this.startShoulderWristY = null;
     }
 
     resetMovement() {
         super.resetMovement();
-        this.lastSeenAt = null;
         this.startShoulderWristY = null;
     }
 
@@ -337,9 +321,6 @@ export class PushUpDetector extends RepDetector {
             const shoulder = landmarks?.[side.shoulder];
             const elbow = landmarks?.[side.elbow];
             const wrist = landmarks?.[side.wrist];
-            const hip = landmarks?.[side.hip];
-            const knee = landmarks?.[side.knee];
-            const ankle = landmarks?.[side.ankle];
 
             if (![shoulder, elbow, wrist].every(p => visible(p, t.visibility))) continue;
 
@@ -347,27 +328,7 @@ export class PushUpDetector extends RepDetector {
             if (armAngle == null) continue;
 
             const upperArmLength = Math.hypot(shoulder.x - elbow.x, shoulder.y - elbow.y);
-            if (upperArmLength < 0.025) continue;
-
-            const lowerAnchor = visible(hip, t.visibility)
-                ? hip
-                : visible(knee, t.visibility)
-                    ? knee
-                    : visible(ankle, t.visibility)
-                        ? ankle
-                        : null;
-
-            if (!lowerAnchor ||
-                Math.abs(wrist.y - lowerAnchor.y) > t.maxHandGroundDistance ||
-                wrist.y < lowerAnchor.y - 0.05) continue;
-
-            const dx = Math.abs(shoulder.x - lowerAnchor.x);
-            const dy = Math.abs(shoulder.y - lowerAnchor.y);
-            const torsoAngle = Math.atan2(dy, Math.max(dx, 0.001)) * 180 / Math.PI;
-            const isFrontView = dx < 0.08 && wrist.y > shoulder.y;
-            if (!isFrontView && torsoAngle > t.maxTorsoAngle) continue;
-
-            if (wrist.y < shoulder.y - 0.05) continue;
+            if (upperArmLength < 0.02) continue;
 
             const armLength = upperArmLength + Math.hypot(elbow.x - wrist.x, elbow.y - wrist.y);
             const shoulderWristY = (wrist.y - shoulder.y) / Math.max(armLength, 0.1);
@@ -380,19 +341,16 @@ export class PushUpDetector extends RepDetector {
         }
 
         if (!validSides.length) {
-            if (this.lastSeenAt != null && (now - this.lastSeenAt) <= t.maxLostFramesGraceMs && this.state !== "unknown") {
-                return this.result(this.filteredAngle);
-            }
-            this.loseTracking();
-            return this.result(null);
+            this.loseTracking(now);
+            return this.result(this.filteredAngle);
         }
 
         this.lastSeenAt = now;
-
         validSides.sort((a, b) => b.confidence - a.confidence);
         const bestSide = validSides[0];
         const averageSides = validSides.length === 2 &&
-            validSides[1].confidence >= bestSide.confidence - 0.15;
+            validSides[1].confidence >= bestSide.confidence - 0.2 &&
+            Math.abs(validSides[0].angle - validSides[1].angle) <= t.maxSideAngleDifference;
         const totalConfidence = averageSides
             ? validSides[0].confidence + validSides[1].confidence
             : 1;
@@ -404,199 +362,101 @@ export class PushUpDetector extends RepDetector {
             : bestSide.shoulderWristY;
 
         const angle = this.filteredAngle = smoothedAngle(this.filteredAngle, rawAngle);
-
         const hasRealChestDrop = this.startShoulderWristY == null ||
             (this.startShoulderWristY - currentShoulderWristY) >= t.minShoulderDropRatio;
 
         if (this.state === "unknown") {
-            this.feedback = "Arms straight.";
+            this.feedback = "Get set.";
             if (angle >= t.starting) {
                 this.holdTransition("starting", now, t.establishMs, () => {
                     this.state = "starting";
                     this.startShoulderWristY = currentShoulderWristY;
-                    this.feedback = "Ready. Lower.";
                 });
             } else {
                 this.clearPending();
             }
-        } else if (this.state === "starting") {
-            this.feedback = "Ready. Lower.";
+        } else if (this.state === "starting" || this.state === "lowering") {
             if (angle >= t.starting) {
                 this.startShoulderWristY = this.startShoulderWristY == null
                     ? currentShoulderWristY
                     : Math.max(this.startShoulderWristY * 0.9 + currentShoulderWristY * 0.1, currentShoulderWristY);
-            }
-            if (angle <= t.bottom && hasRealChestDrop) {
-                this.holdTransition("bottom", now, t.settleMs, () => {
-                    this.state = "bottom";
-                    this.feedback = "Push up.";
-                });
+                this.state = "starting";
+            } else if (angle <= t.bottom && hasRealChestDrop) {
+                this.pendingState = null;
+                this.state = "bottom";
             } else if (angle <= t.lowering) {
-                this.holdTransition("lowering", now, t.settleMs, () => {
-                    this.state = "lowering";
-                    this.feedback = "Keep lowering.";
-                });
-            } else {
-                this.clearPending();
+                this.state = "lowering";
             }
-        } else if (this.state === "lowering") {
-            this.feedback = "Keep lowering.";
-            if (angle <= t.bottom && hasRealChestDrop) {
-                this.holdTransition("bottom", now, t.settleMs, () => {
-                    this.state = "bottom";
-                    this.feedback = "Push up.";
-                });
-            } else if (angle >= t.starting) {
-                this.holdTransition("starting", now, t.settleMs, () => {
-                    this.state = "starting";
-                    this.feedback = "Go lower.";
-                });
-            } else {
-                this.clearPending();
-            }
-        } else if (this.state === "bottom") {
-            this.feedback = "Push up.";
+        } else if (this.state === "bottom" || this.state === "returning") {
             if (angle >= t.starting) {
                 this.holdTransition("starting", now, t.returnMs, () => {
-                    this.count += 1;
                     this.state = "starting";
                     this.startShoulderWristY = currentShoulderWristY;
-                    this.feedback = "Nice rep.";
+                    this.completeRep(now);
                 });
             } else if (angle >= t.returning) {
-                this.holdTransition("returning", now, t.settleMs, () => {
-                    this.state = "returning";
-                    this.feedback = "Lock out.";
-                });
-            } else {
-                this.clearPending();
-            }
-        } else if (this.state === "returning") {
-            this.feedback = "Lock out.";
-            if (angle >= t.starting) {
-                this.holdTransition("starting", now, t.returnMs, () => {
-                    this.count += 1;
-                    this.state = "starting";
-                    this.startShoulderWristY = currentShoulderWristY;
-                    this.feedback = "Nice rep.";
-                });
+                this.state = "returning";
             } else if (angle <= t.bottom) {
-                this.holdTransition("bottom", now, t.settleMs, () => {
-                    this.state = "bottom";
-                    this.feedback = "Push up.";
-                });
-            } else {
-                this.clearPending();
+                this.state = "bottom";
             }
         }
+
         return this.result(angle);
     }
 }
 
 class AngleCycleDetector extends RepDetector {
-    constructor(thresholds, initialLabel, phaseLabels, lostTrackingLabel) {
-        super(thresholds, initialLabel, lostTrackingLabel);
-        this.phaseLabels = phaseLabels;
+    constructor(thresholds, lostTrackingLabel) {
+        super(thresholds, "Get set.", lostTrackingLabel);
     }
 
     updateAngle(angle, now) {
         if (!Number.isFinite(angle)) {
-            this.loseTracking();
-            return this.result(null);
+            this.loseTracking(now);
+            return this.result(this.filteredAngle);
         }
+
+        this.lastSeenAt = now;
         const t = this.thresholds;
         const filtered = this.filteredAngle = smoothedAngle(this.filteredAngle, angle);
         const descending = t.start > t.bottom;
 
+        const atStart = descending ? filtered >= t.start : filtered <= t.start;
+        const atActive = descending ? filtered <= t.active : filtered >= t.active;
+        const atBottom = descending ? filtered <= t.bottom : filtered >= t.bottom;
+        const atReturn = descending ? filtered >= t.return : filtered <= t.return;
+
         if (this.state === "unknown") {
-            this.feedback = this.initialLabel;
-            const atStart = descending
-                ? filtered >= t.start
-                : filtered <= t.start;
+            this.feedback = "Get set.";
             if (atStart) {
                 this.holdTransition("start", now, t.establishMs, () => {
                     this.state = "start";
-                    this.feedback = this.phaseLabels.start;
                 });
-            } else this.clearPending();
-        } else if (this.state === "start") {
-            this.feedback = this.phaseLabels.start;
-            const movementStarted = descending
-                ? filtered <= t.active
-                : filtered >= t.active;
-            if (movementStarted) {
-                const reachedBottom = descending
-                    ? filtered <= t.bottom
-                    : filtered >= t.bottom;
-                if (reachedBottom) {
-                    this.pendingState = null;
-                    this.state = "bottom";
-                    this.feedback = this.phaseLabels.bottom;
-                } else {
-                    this.holdTransition("active", now, t.settleMs, () => {
-                        this.state = "active";
-                        this.feedback = this.phaseLabels.active;
-                    });
-                }
-            } else this.clearPending();
-        } else if (this.state === "active") {
-            this.feedback = this.phaseLabels.active;
-            const reachedBottom = descending
-                ? filtered <= t.bottom
-                : filtered >= t.bottom;
-            if (reachedBottom) {
-                this.holdTransition("bottom", now, t.settleMs, () => {
-                    this.state = "bottom";
-                    this.feedback = this.phaseLabels.bottom;
-                });
-            } else if (descending
-                ? filtered >= t.start
-                : filtered <= t.start) {
-                this.holdTransition("start", now, t.settleMs, () => {
-                    this.state = "start";
-                    this.feedback = "Go deeper.";
-                });
-            } else this.clearPending();
-        } else if (this.state === "bottom") {
-            this.feedback = this.phaseLabels.bottom;
-            const returnedToStart = descending
-                ? filtered >= t.start
-                : filtered <= t.start;
-            const returning = descending
-                ? filtered >= t.return
-                : filtered <= t.return;
-            if (returnedToStart) {
+            } else {
+                this.clearPending();
+            }
+        } else if (this.state === "start" || this.state === "active") {
+            if (atBottom) {
                 this.pendingState = null;
-                this.count += 1;
+                this.state = "bottom";
+            } else if (atActive) {
+                this.state = "active";
+            } else if (atStart) {
                 this.state = "start";
-                this.feedback = "Nice rep.";
-            } else if (returning) {
-                this.holdTransition("returning", now, t.settleMs, () => {
-                    this.state = "returning";
-                    this.feedback = this.phaseLabels.returning;
-                });
-            } else this.clearPending();
-        } else if (this.state === "returning") {
-            this.feedback = this.phaseLabels.returning;
-            const returned = descending
-                ? filtered >= t.start
-                : filtered <= t.start;
-            const returnedAgain = descending
-                ? filtered <= t.bottom
-                : filtered >= t.bottom;
-            if (returned) {
+            }
+        } else if (this.state === "bottom" || this.state === "returning") {
+            if (atStart) {
                 this.holdTransition("start", now, t.returnMs, () => {
-                    this.count += 1;
                     this.state = "start";
-                    this.feedback = "Nice rep.";
+                    this.completeRep(now);
                 });
-            } else if (returnedAgain) {
-                this.holdTransition("bottom", now, t.settleMs, () => {
-                    this.state = "bottom";
-                    this.feedback = this.phaseLabels.bottom;
-                });
-            } else this.clearPending();
+            } else if (atReturn) {
+                this.state = "returning";
+            } else if (atBottom) {
+                this.state = "bottom";
+            }
         }
+
         return this.result(filtered);
     }
 }
@@ -615,10 +475,9 @@ function armCycleAngles(landmarks, thresholds) {
         const angle = angleAt(shoulder, elbow, wrist);
         if (angle == null) continue;
         const upperArmLength = Math.hypot(shoulder.x - elbow.x, shoulder.y - elbow.y);
-        if (upperArmLength < 0.025) continue;
+        if (upperArmLength < 0.02) continue;
         values.push({ side: name, angle });
     }
-
     return values;
 }
 
@@ -637,71 +496,23 @@ function shoulderRaiseAngles(landmarks, thresholds) {
     return values;
 }
 
-function exerciseAngleConfig(slug) {
-    const config = EXERCISE_THRESHOLDS[slug];
-    if (!config) return null;
-    const phaseLabels = slug === "pull-ups"
-        ? {
-            start: "Full hang.",
-            active: "Pull up.",
-            bottom: "Lower slowly.",
-            returning: "Full hang."
-        }
-        : slug === "biceps-curls"
-            ? {
-                start: "Arms straight.",
-                active: "Curl up.",
-                bottom: "Lower slowly.",
-                returning: "Extend arm."
-            }
-            : slug === "triceps-extension"
-                ? {
-                    start: "Elbow bent.",
-                    active: "Extend arm.",
-                    bottom: "Bend slowly.",
-                    returning: "Back to start."
-                }
-                : slug === "shoulder-press"
-                    ? {
-                        start: "Start low.",
-                        active: "Press up.",
-                        bottom: "Lower slowly.",
-                        returning: "Arms down."
-                    }
-                    : {
-                        start: "Arms down.",
-                        active: "Raise arms.",
-                        bottom: "Lower slowly.",
-                        returning: "Arms down."
-                    };
-    const lostTrackingLabel = slug === "pull-ups"
-        ? "Can't see hands/hips."
-        : slug === "lateral-raises"
-            ? "Can't see arms."
-            : "Can't see hands.";
-
-    return { config, phaseLabels, lostTrackingLabel };
-}
-
 export class ExerciseArmDetector extends AngleCycleDetector {
     constructor(slug) {
-        const setup = exerciseAngleConfig(slug);
-        if (!setup) throw new Error(`No arm detector configuration exists for ${slug}.`);
-        super(
-            setup.config,
-            "Get set.",
-            setup.phaseLabels,
-            setup.lostTrackingLabel
-        );
+        const config = EXERCISE_THRESHOLDS[slug];
+        if (!config) throw new Error(`No arm detector configuration exists for ${slug}.`);
+        const lostTrackingLabel = slug === "pull-ups"
+            ? "Can't see hands/hips."
+            : slug === "lateral-raises"
+                ? "Can't see arms."
+                : "Can't see hands.";
+
+        super(config, lostTrackingLabel);
         this.sideDetectors = Object.fromEntries(
-            Object.keys(LANDMARKS).map(side => [side, new AngleCycleDetector(
-                setup.config,
-                "Get set.",
-                setup.phaseLabels,
-                setup.lostTrackingLabel
-            )])
+            Object.keys(LANDMARKS).map(side => [
+                side,
+                new AngleCycleDetector(config, lostTrackingLabel)
+            ])
         );
-        this.lastRepAt = -Infinity;
     }
 
     reset(count = 0) {
@@ -709,13 +520,12 @@ export class ExerciseArmDetector extends AngleCycleDetector {
         for (const detector of Object.values(this.sideDetectors || {})) {
             detector.reset();
         }
-        this.lastRepAt = -Infinity;
     }
 
-    loseTracking() {
-        super.loseTracking();
+    loseTracking(now = null) {
+        super.loseTracking(now);
         for (const detector of Object.values(this.sideDetectors || {})) {
-            detector.loseTracking();
+            detector.loseTracking(now);
         }
     }
 
@@ -723,22 +533,33 @@ export class ExerciseArmDetector extends AngleCycleDetector {
         const angles = this.thresholds.name === "lateral raise"
             ? shoulderRaiseAngles(landmarks, this.thresholds)
             : armCycleAngles(landmarks, this.thresholds);
+
+        if (!angles.length) {
+            this.loseTracking(now);
+            return this.result(this.filteredAngle);
+        }
+
+        this.lastSeenAt = now;
         const bySide = new Map(angles.map(({ side, angle }) => [side, angle]));
-        const completed = [];
+        let repCompletedThisFrame = false;
+
         for (const [side, detector] of Object.entries(this.sideDetectors)) {
             const angle = bySide.get(side);
             if (angle == null) {
-                detector.loseTracking();
+                detector.loseTracking(now);
                 continue;
             }
             const previousCount = detector.count;
             detector.updateAngle(angle, now);
-            if (detector.count > previousCount) completed.push(detector);
+            if (detector.count > previousCount) {
+                repCompletedThisFrame = true;
+            }
         }
 
-        if (completed.length && now - this.lastRepAt > 250) {
-            this.count += 1;
-            this.lastRepAt = now;
+        if (repCompletedThisFrame) {
+            this.completeRep(now);
+        } else if (this.feedback !== "Nice rep.") {
+            this.feedback = "Get set.";
         }
 
         const activeDetectors = Object.values(this.sideDetectors)
@@ -747,106 +568,99 @@ export class ExerciseArmDetector extends AngleCycleDetector {
             ["start", "active", "bottom", "returning"].indexOf(second.state) -
             ["start", "active", "bottom", "returning"].indexOf(first.state)
         )[0];
+
         const angle = average(angles.map(value => value.angle));
         this.state = current?.state || "unknown";
-        this.feedback = current?.feedback ||
-            (angles.length ? "Get set." : this.lostTrackingLabel);
         this.filteredAngle = angle;
         return this.result(angle);
     }
 }
 
 export const JUMPING_JACK_THRESHOLDS = Object.freeze({
-    visibility: VISIBILITY_THRESHOLD,
-    armsDownMax: 0.45,
-    armsUpMin: 0.65,
-    feetClosedMax: 0.75,
-    feetOpenMin: 0.95,
+    visibility: 0.35,
+    armsDownMax: 0.48,
+    armsUpMin: 0.58,
+    feetClosedMax: 0.85,
+    feetOpenMin: 0.92,
     settleMs: 0,
-    establishMs: 160,
+    establishMs: 120,
     returnMs: 0,
-    maxFrameGapMs: 350
+    minRepIntervalMs: 320
 });
 
 export class JumpingJackDetector extends RepDetector {
     constructor(thresholds = JUMPING_JACK_THRESHOLDS) {
-        super(thresholds, "Show arms, feet.", "Can't see hands/legs.");
+        super(thresholds, "Get set.", "Can't see hands/legs.");
     }
 
     update(landmarks, now = performance.now()) {
         const t = this.thresholds;
         const required = [11, 12, 15, 16, 23, 24, 27, 28];
         if (!required.every(index => visible(landmarks?.[index], t.visibility))) {
-            this.loseTracking();
+            this.loseTracking(now);
             return this.result(null);
         }
         const shoulderWidth = Math.abs(landmarks[11].x - landmarks[12].x);
         const hipWidth = Math.abs(landmarks[23].x - landmarks[24].x);
-        if (shoulderWidth < 0.025 || hipWidth < 0.015) {
-            this.loseTracking();
+        if (shoulderWidth < 0.02 || hipWidth < 0.015) {
+            this.loseTracking(now);
             return this.result(null);
         }
 
+        this.lastSeenAt = now;
         const armHeight = (
             (landmarks[11].y - landmarks[15].y) +
             (landmarks[12].y - landmarks[16].y)
         ) / (2 * shoulderWidth);
         const legWidth = Math.abs(landmarks[27].x - landmarks[28].x) / hipWidth;
-        const armsUp = armHeight >= t.armsUpMin;
-        const armsDown = armHeight <= t.armsDownMax;
-        const feetOpen = legWidth >= t.feetOpenMin;
-        const feetClosed = legWidth <= t.feetClosedMax;
-        const jumping = armsUp || feetOpen;
-        const closed = armsDown || feetClosed;
+
+        const jumping = armHeight >= t.armsUpMin && legWidth >= t.feetOpenMin;
+        const closed = armHeight <= t.armsDownMax && legWidth <= t.feetClosedMax;
 
         if (this.state === "unknown") {
-            this.feedback = "Feet together.";
+            this.feedback = "Get set.";
             if (closed) {
                 this.holdTransition("closed", now, t.establishMs, () => {
                     this.state = "closed";
-                    this.feedback = "Ready. Jump.";
                 });
-            } else this.clearPending();
+            } else {
+                this.clearPending();
+            }
         } else if (this.state === "closed") {
-            this.feedback = "Jump up.";
             if (jumping) {
                 this.holdTransition("open", now, t.settleMs, () => {
                     this.state = "open";
-                    this.feedback = "Close stance.";
                 });
-            } else this.clearPending();
+            } else {
+                this.clearPending();
+            }
         } else if (this.state === "open") {
-            this.feedback = "Close stance.";
             if (closed) {
                 this.holdTransition("closed", now, t.returnMs, () => {
-                    this.count += 1;
                     this.state = "closed";
-                    this.feedback = "Nice rep.";
+                    this.completeRep(now);
                 });
-            } else this.clearPending();
+            } else {
+                this.clearPending();
+            }
         }
         return this.result(jumping ? "open" : closed ? "closed" : this.state);
     }
 }
 
 export const SKIPPING_ROPE_THRESHOLDS = Object.freeze({
-    visibility: VISIBILITY_THRESHOLD,
-    minFootClearance: 0.045,
-    landingTolerance: 0.07,
+    visibility: 0.35,
+    minFootClearance: 0.04,
+    landingTolerance: 0.018,
     settleMs: 0,
-    establishMs: 160,
+    establishMs: 120,
     returnMs: 0,
-    maxFrameGapMs: 300
+    minRepIntervalMs: 240
 });
 
 export class SkippingRopeDetector extends RepDetector {
     constructor(thresholds = SKIPPING_ROPE_THRESHOLDS) {
-        super(thresholds, "Show hips, ankles.", "Can't see legs.");
-        this.baselineHipY = null;
-    }
-
-    reset(count = 0) {
-        super.reset(count);
+        super(thresholds, "Get set.", "Can't see legs.");
         this.baselineHipY = null;
     }
 
@@ -859,7 +673,7 @@ export class SkippingRopeDetector extends RepDetector {
         const t = this.thresholds;
         const required = [11, 12, 23, 24, 25, 26, 27, 28];
         if (!required.every(index => visible(landmarks?.[index], t.visibility))) {
-            this.loseTracking();
+            this.loseTracking(now);
             return this.result(null);
         }
         const leftLeg = angleAt(landmarks[23], landmarks[25], landmarks[27]);
@@ -869,49 +683,54 @@ export class SkippingRopeDetector extends RepDetector {
             Math.hypot(landmarks[11].x - landmarks[23].x, landmarks[11].y - landmarks[23].y) +
             Math.hypot(landmarks[12].x - landmarks[24].x, landmarks[12].y - landmarks[24].y)
         ) / 2;
-        if (leftLeg == null || rightLeg == null ||
+
+        if (
+            leftLeg == null ||
+            rightLeg == null ||
             Math.abs(leftLeg - rightLeg) > 90 ||
             Math.abs(landmarks[27].x - landmarks[28].x) > 0.45 ||
-            torsoLength < MIN_SEGMENT_LENGTH) {
-            this.loseTracking();
+            torsoLength < MIN_SEGMENT_LENGTH
+        ) {
+            this.loseTracking(now);
             return this.result(null);
         }
 
+        this.lastSeenAt = now;
+
         if (this.state === "unknown") {
-            this.feedback = "Stand tall.";
-            if (this.baselineHipY == null) this.baselineHipY = hipY;
-            else this.baselineHipY = this.baselineHipY * 0.8 + hipY * 0.2;
-            const postureReady = leftLeg > 145 && rightLeg > 145;
-            if (postureReady) {
+            this.feedback = "Get set.";
+            this.baselineHipY = this.baselineHipY == null
+                ? hipY
+                : this.baselineHipY * 0.8 + hipY * 0.2;
+            if (leftLeg > 140 && rightLeg > 140) {
                 this.holdTransition("grounded", now, t.establishMs, () => {
                     this.state = "grounded";
                     this.baselineHipY = hipY;
-                    this.feedback = "Ready. Jump.";
                 });
-            } else this.clearPending();
+            } else {
+                this.clearPending();
+            }
         } else {
             const rise = (this.baselineHipY - hipY) / torsoLength;
             if (this.state === "grounded") {
-                this.feedback = "Jump lightly.";
                 if (rise >= t.minFootClearance) {
                     this.holdTransition("airborne", now, t.settleMs, () => {
                         this.state = "airborne";
-                        this.feedback = "Land together.";
                     });
                 } else {
                     this.clearPending();
-                    this.baselineHipY = this.baselineHipY * 0.97 + hipY * 0.03;
+                    this.baselineHipY = this.baselineHipY * 0.96 + hipY * 0.04;
                 }
             } else if (this.state === "airborne") {
-                this.feedback = "Land together.";
                 if (rise <= t.landingTolerance) {
                     this.holdTransition("grounded", now, t.returnMs, () => {
-                        this.count += 1;
                         this.state = "grounded";
-                        this.baselineHipY = hipY;
-                        this.feedback = "Nice jump.";
+                        this.baselineHipY = this.baselineHipY * 0.85 + hipY * 0.15;
+                        this.completeRep(now);
                     });
-                } else this.clearPending();
+                } else {
+                    this.clearPending();
+                }
             }
         }
         return this.result(hipY);
@@ -928,7 +747,7 @@ export class PlankTimerDetector {
         this.elapsedMs = Math.max(0, Number(elapsedMs) || 0);
         this.lastValidAt = null;
         this.isCorrect = false;
-        this.feedback = "Start plank.";
+        this.feedback = "Get set.";
         this.lostTrackingLabel = "Can't see legs.";
     }
 
@@ -945,7 +764,6 @@ export class PlankTimerDetector {
         ];
         let hasVisibleBody = false;
         let hasVisibleSupport = false;
-        let hasStableSupport = false;
 
         for (const side of sideCandidates) {
             const shoulder = landmarks?.[side.shoulder];
@@ -968,8 +786,8 @@ export class PlankTimerDetector {
             const armAngle = angleAt(shoulder, elbow, wrist);
             const bodyLength = Math.hypot(deltaX, deltaY);
             if (armAngle == null || armAngle < t.minSupportArmAngle) continue;
-            hasStableSupport = true;
             if (bodyLength < t.minBodyLength) continue;
+
             const bodyLineAngle = Math.atan2(Math.abs(deltaY), Math.abs(deltaX)) * 180 / Math.PI;
             const hipDeviation = Math.abs(
                 deltaX * (shoulder.y - hip.y) - (shoulder.x - hip.x) * deltaY
@@ -980,13 +798,13 @@ export class PlankTimerDetector {
 
             if (this.lastValidAt != null) {
                 const delta = now - this.lastValidAt;
-                if (delta > 0 && delta <= t.maxFrameGapMs) {
-                    this.elapsedMs += delta;
+                if (delta > 0) {
+                    this.elapsedMs += Math.min(delta, t.maxFrameGapMs);
                 }
             }
             this.lastValidAt = now;
             this.isCorrect = true;
-            this.feedback = "Strong form.";
+            this.feedback = "Nice rep.";
             return this.result(true);
         }
 
@@ -995,9 +813,7 @@ export class PlankTimerDetector {
             ? this.lostTrackingLabel
             : !hasVisibleSupport
                 ? "Can't see hands."
-                : !hasStableSupport
-                    ? "Steady arm."
-                : "Straighten up.";
+                : "Get set.";
         return this.result(false);
     }
 

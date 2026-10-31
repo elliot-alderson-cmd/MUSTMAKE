@@ -99,26 +99,35 @@ async function createPoseLandmarker() {
         MEDIAPIPE_WASM
     );
 
+    const buildOptions = delegate => ({
+        baseOptions: {
+            modelAssetPath: POSE_MODEL,
+            delegate
+        },
+        runningMode: "VIDEO",
+        numPoses: 1,
+        minPoseDetectionConfidence: 0.55,
+        minPosePresenceConfidence: 0.55,
+        minTrackingConfidence: 0.55
+    });
+
     try {
         return await PoseLandmarker.createFromOptions(
             fileset,
-            {
-                baseOptions: {
-                    modelAssetPath: POSE_MODEL,
-                    delegate: "CPU"
-                },
-                runningMode: "VIDEO",
-                numPoses: 1,
-                minPoseDetectionConfidence: 0.70,
-                minPosePresenceConfidence: 0.70,
-                minTrackingConfidence: 0.75
-            }
+            buildOptions("GPU")
         );
-    } catch (error) {
-        throw new Error(
-            "Pose detection could not initialize on this device.",
-            { cause: error }
-        );
+    } catch {
+        try {
+            return await PoseLandmarker.createFromOptions(
+                fileset,
+                buildOptions("CPU")
+            );
+        } catch (error) {
+            throw new Error(
+                "Pose detection could not initialize on this device.",
+                { cause: error }
+            );
+        }
     }
 }
 
@@ -198,6 +207,14 @@ export function mountAiMonitor(
     const context = canvas.getContext("2d");
     const detector = createExerciseDetector(exercise.slug);
     const listeners = new AbortController();
+    const repSound = typeof Audio !== "undefined"
+        ? new Audio("/assets/nice_rep.mp3")
+        : null;
+    if (repSound) {
+        repSound.preload = "auto";
+        repSound.load();
+    }
+
     function applyCameraMirrorPreference() {
         preview.dataset.mirrored = String(getCameraMirrorPreference());
     }
@@ -240,6 +257,8 @@ export function mountAiMonitor(
     let saveInFlight = false;
     let discardInProgress = false;
     let cameraEnded = false;
+    let reviewHistoryGuard = false;
+    let reviewHistoryUrl = null;
 
     let sessionStarted = Boolean(
         snapshot?.sessionStarted || snapshot?.finished
@@ -475,9 +494,6 @@ export function mountAiMonitor(
         lastScrollPosition = currentScrollPosition;
         if (!smartScrollArmed) return;
 
-        // Workout pages can have very little scroll range, so the preview's
-        // top edge may never reach the viewport top. Use the real scroller's
-        // position as the trigger and return to the inline preview at its top.
         const shouldBeFullscreen = currentScrollPosition > 0.5;
         if (!shouldBeFullscreen && previewFixed && !previewTargetFullscreen) {
             retargetExpandedPreview();
@@ -521,9 +537,6 @@ export function mountAiMonitor(
     }
 
     function handleVisualViewportScroll() {
-        // Scrolling the visual viewport is part of the gesture that closes
-        // smart camera. Retargeting here restarts the collapse every frame,
-        // which can leave the preview hanging halfway on mobile browsers.
         if (!previewFixed || !previewTargetFullscreen || previewTransitioning) {
             return;
         }
@@ -543,6 +556,10 @@ export function mountAiMonitor(
         status.dataset.state = state;
         status.textContent = message;
         updateSmartCameraPreview();
+
+        if (state === "finished") {
+            protectReviewFromBack();
+        }
 
         if (state === "running") {
             smartScrollArmed = false;
@@ -594,9 +611,9 @@ export function mountAiMonitor(
     }
 
     function playRepSound() {
-        if (!soundEnabled) return;
-        const sound = new Audio("/assets/nice_rep.mp3");
-        sound.play().catch(error => {
+        if (!soundEnabled || !repSound) return;
+        repSound.currentTime = 0;
+        repSound.play().catch(error => {
             console.warn("Could not play the rep sound.", error);
         });
     }
@@ -753,7 +770,7 @@ export function mountAiMonitor(
 
             if (
                 !landmark ||
-                visibilityOf(landmark) < 0.4
+                visibilityOf(landmark) < 0.35
             ) {
                 return null;
             }
@@ -779,7 +796,7 @@ export function mountAiMonitor(
         }
 
         landmarks.forEach((landmark, index) => {
-            if (visibilityOf(landmark) < 0.5) {
+            if (visibilityOf(landmark) < 0.45) {
                 return;
             }
 
@@ -867,20 +884,22 @@ export function mountAiMonitor(
     }
 
     function updateCurrentPose(landmarks) {
+        const now = performance.now();
+
         if (!landmarks?.length) {
             clearOverlay();
 
             if (isPlank) {
                 const result = detector.update(
                     null,
-                    performance.now()
+                    now
                 );
 
                 elapsedMs = result.elapsedMs;
                 setExerciseFeedback(result.feedback);
                 updateClock();
             } else {
-                detector.loseTracking();
+                detector.loseTracking(now);
                 setExerciseFeedback(detector.feedback);
             }
 
@@ -892,14 +911,14 @@ export function mountAiMonitor(
         const previousCount = rawCount;
         const result = detector.update(
             landmarks,
-            performance.now()
+            now
         );
 
         if (isPlank) {
             elapsedMs = result.elapsedMs;
             updateClock();
         } else {
-            rawCount = result.count;
+            rawCount = Math.min(MAX_REPETITIONS, result.count);
 
             if (countOutput) {
                 countOutput.textContent = String(rawCount);
@@ -1205,15 +1224,14 @@ export function mountAiMonitor(
         }
     }
 
-    function discardSession() {
+    function discardSession(alreadyConfirmed = false) {
         if (discardInProgress || !["finished", "saved"].includes(lifecycle)) {
             return;
         }
 
         if (
-            !window.confirm(
-                "Discard this session? It will not be saved."
-            )
+            !alreadyConfirmed &&
+            !window.confirm("Discard this session? It will not be saved.")
         ) {
             return;
         }
@@ -1247,6 +1265,30 @@ export function mountAiMonitor(
         window.location.replace("/today");
     }
 
+    function protectReviewFromBack() {
+        if (reviewHistoryGuard) return;
+        reviewHistoryUrl ??= window.location.href;
+        window.history.pushState(
+            { ...window.history.state, mustmakeWorkoutReview: true },
+            "",
+            reviewHistoryUrl
+        );
+        reviewHistoryGuard = true;
+    }
+
+    function handleReviewBack() {
+        if (!reviewHistoryGuard) return;
+        reviewHistoryGuard = false;
+
+        if (lifecycle !== "finished" || saveInFlight) return;
+
+        if (window.confirm("Discard this session? It will not be saved.")) {
+            discardSession(true);
+            return;
+        }
+
+        protectReviewFromBack();
+    }
     function correctedCount() {
         const value = correction.value.trim();
         const parsed = Number(value);
@@ -1261,7 +1303,11 @@ export function mountAiMonitor(
 
         correctionError.textContent = valid
             ? ""
-            : `Use ${minimum}–${maximum}${isPlank ? " sec" : isJumpCount ? " jumps" : " reps"}.`;
+            : parsed < minimum
+                ? "Cannot be zero."
+                : parsed > maximum
+                    ? "Don't lie, enter truth."
+                    : `${minimum}–${maximum}${isPlank ? " sec" : isJumpCount ? " jumps" : " reps"}.`;
 
         correction.setAttribute(
             "aria-invalid",
@@ -1544,7 +1590,7 @@ export function mountAiMonitor(
 
     discardButton.addEventListener(
         "click",
-        discardSession,
+        () => discardSession(),
         { signal: listeners.signal }
     );
 
@@ -1563,6 +1609,12 @@ export function mountAiMonitor(
     window.addEventListener(
         "pagehide",
         handlePageHide,
+        { signal: listeners.signal }
+    );
+
+    window.addEventListener(
+        "popstate",
+        handleReviewBack,
         { signal: listeners.signal }
     );
 

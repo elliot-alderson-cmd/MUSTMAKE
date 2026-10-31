@@ -6,10 +6,8 @@
     const PENDING_FINISH_SOUND_KEY = "mustmake_pending_finish_sound";
     const PENDING_DISCARD_SOUND_KEY = "mustmake_pending_discard_sound";
     const EXERCISE_SOUND_KEY_PREFIX = "mustmake_exercise_sound:";
-    const toastSound = new Audio("/assets/toaster.mp3");
     const finishSound = new Audio("/assets/finishsession.mp3");
     const discardSound = new Audio("/assets/discardsession.mp3");
-    toastSound.preload = "auto";
     finishSound.preload = "auto";
     discardSound.preload = "auto";
     const icons = {
@@ -18,15 +16,6 @@
         warning: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.8 19h18.4L12 3Z"/><path d="M12 9v4m0 3h.01"/></svg>',
         info: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg>'
     };
-
-    function playToastSound() {
-        if (!getExerciseSoundPreference()) return;
-
-        toastSound.currentTime = 0;
-        toastSound.play().catch(error => {
-            console.warn("Could not play the notification sound.", error);
-        });
-    }
 
     function getExerciseSoundPreference() {
         try {
@@ -180,9 +169,6 @@
             toast.dataset.type = type;
             toast.setAttribute("role", type === "error" ? "alert" : "status");
             text.textContent = String(nextMessage ?? "");
-            if (type !== "loading" && nextMessage !== "Session discarded.") {
-                playToastSound();
-            }
             icon.classList.toggle("is-loading", type === "loading");
             icon.innerHTML = type === "loading"
                 ? '<span class="toast-spinner"></span>'
