@@ -192,7 +192,7 @@
             ? `
                 ${navLink("/edit-profile", "Edit details", currentPage)}
                 ${navLink("/settings", "Settings", currentPage)}
-                ${navLink("/legal/about.html", "About", currentPage)}
+                ${navLink("/about", "About", currentPage)}
                 <a href="mailto:tejas49167@gmail.com?subject=Bug%20Report" target="_blank" rel="noopener noreferrer">Report Bug</a>
                 <a href="mailto:tejas49167@gmail.com?subject=Suggestion" target="_blank" rel="noopener noreferrer">Suggestions</a>
 
@@ -205,7 +205,7 @@
             : `
                 ${navLink("/exercises", "Exercises", currentPage)}
                 ${navLink("/settings", "Settings", currentPage)}
-                ${navLink("/legal/about.html", "About us", currentPage)}
+                ${navLink("/about", "About us", currentPage)}
                 ${navLink("/login", "Login", currentPage)}
                 ${navLink("/signup", "Sign up", currentPage)}
             `;
