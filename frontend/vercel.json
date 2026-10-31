@@ -30,6 +30,7 @@
     { "source": "/user-profile", "destination": "/pages/user-profile" },
     { "source": "/competition", "destination": "/pages/competition" },
     { "source": "/google-callback", "destination": "/pages/google-callback" },
-    { "source": "/first-details", "destination": "/pages/firstdetails" }
+    { "source": "/first-details", "destination": "/pages/firstdetails" },
+    { "source": "/about", "destination": "/pages/about-us" }
   ]
 }

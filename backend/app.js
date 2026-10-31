@@ -72,7 +72,8 @@ if (fs.existsSync(frontendRoot)) {
         "/user-profile": "user-profile.html",
         "/competition": "competition.html",
         "/google-callback": "google-callback.html",
-        "/first-details": "firstdetails.html"
+        "/first-details": "firstdetails.html",
+        "/about": "about-us.html"
     };
 
     for (const [route, page] of Object.entries(frontendPages)) {
